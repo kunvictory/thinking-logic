@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>邏輯題型練習產生器</title>
+<style>
+:root{
+  --bg:#fafaf8; --card:#fff; --text:#1a1a18; --sub:#6b6a65; --border:#e3e2dc;
+  --accent:#185fa5; --accent-bg:#e6f1fb; --good:#0f6e56; --good-bg:#e1f5ee;
+  --bad:#993c1d; --bad-bg:#faece7;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17171a; --card:#222225; --text:#efeeea; --sub:#9b9a94; --border:#35353a;
+    --accent:#85b7eb; --accent-bg:#0c447c; --good:#5dcaa5; --good-bg:#085041;
+    --bad:#f0997b; --bad-bg:#712b13;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC",sans-serif;margin:0;padding:1rem 0 2rem;line-height:1.6}
+.wrap{max-width:640px;margin:0 auto;padding:0 1rem}
+h1{font-size:1.1rem;font-weight:500;margin:.5rem 0 .6rem}
+.tabs{display:flex;gap:.2rem;margin-bottom:1rem;border-bottom:1px solid var(--border)}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:.5rem .8rem;color:var(--sub);font-size:.95rem;cursor:pointer;margin-bottom:-1px}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+.chip{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:.35rem .8rem;font-size:.85rem;cursor:pointer}
+.chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1rem}
+.score{font-size:.85rem;color:var(--sub);margin-bottom:.6rem}
+.tag{font-size:.78rem;color:var(--sub);margin-bottom:.4rem}
+.q{font-size:1rem;margin-bottom:1rem;white-space:pre-wrap}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:8px;padding:.6rem .8rem;margin-bottom:.5rem;cursor:pointer;font-size:.95rem}
+.opt:hover{border-color:var(--accent)}
+.opt.correct{background:var(--good-bg);border-color:var(--good);color:var(--good)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.opt.picked{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.opt:disabled{cursor:default}
+.explain{font-size:.85rem;color:var(--sub);margin-top:.8rem;padding-top:.8rem;border-top:1px dashed var(--border);white-space:pre-wrap}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.6rem 1.2rem;font-size:.9rem;cursor:pointer}
+.btn.ghost{background:none;color:var(--sub);border:1px solid var(--border)}
+.btn-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
+.field{margin-bottom:1rem}
+.field>label,.field>.lbl{display:block;font-size:.85rem;color:var(--sub);margin-bottom:.3rem}
+input[type=number],select{font-size:.95rem;padding:.45rem .6rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);width:100%}
+.radio{display:block;padding:.35rem 0;font-size:.95rem}
+.radio input{margin-right:.5rem}
+.sum{font-size:.95rem;margin-bottom:1rem}
+.weakbox{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad);border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.9rem}
+.weakbox b{font-weight:600}
+.okbox{background:var(--good-bg);border:1px solid var(--good);color:var(--good);border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.9rem}
+.note{font-size:.8rem;color:var(--sub);margin:.4rem 0 1rem}
+.chblk{margin-bottom:1.1rem}
+.chhead{display:flex;justify-content:space-between;font-size:.95rem;font-weight:500;margin-bottom:.25rem}
+.bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar.weak i{background:var(--bad)}
+.row{display:grid;grid-template-columns:7.2em 1fr 3.2em 3.4em;gap:.5rem;align-items:center;font-size:.85rem;padding:.3rem 0}
+.row .cnt{color:var(--sub);text-align:right}
+.row .pct{text-align:right}
+.row.weak .nm,.row.weak .pct{color:var(--bad);font-weight:600}
+.row.none{color:var(--sub)}
+.flag{font-size:.7rem;border:1px solid var(--bad);color:var(--bad);border-radius:4px;padding:0 .3rem;margin-left:.3rem}
+.big{font-size:1.6rem;font-weight:500;margin:.2rem 0 .6rem}
+.wrongitem{border-top:1px dashed var(--border);padding-top:.9rem;margin-top:.9rem}
+.wrongitem .ans{font-size:.9rem;margin-top:.4rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>邏輯題型練習產生器</h1>
+<nav class="tabs">
+  <button class="tab active" data-tab="practice">練習</button>
+  <button class="tab" data-tab="stats">統計 / 弱項</button>
+  <button class="tab" data-tab="exam">考卷</button>
+</nav>
+
+<!-- 練習 -->
+<section id="p-practice">
+  <div class="chips" id="chips"></div>
+  <div class="card">
+    <div class="score" id="score">尚未作答</div>
+    <div id="diagram"></div>
+    <div class="q" id="q"></div>
+    <div id="opts"></div>
+    <div class="explain" id="explain" hidden></div>
+    <button class="btn" id="next" hidden style="margin-top:1rem">下一題</button>
+  </div>
+</section>
+
+<!-- 統計 -->
+<section id="p-stats" hidden>
+  <div id="statsBody"></div>
+  <div class="btn-row"><button class="btn ghost" id="clearBtn">清除所有紀錄</button></div>
+</section>
+
+<!-- 考卷 -->
+<section id="p-exam" hidden>
+  <div class="card" id="examSetup">
+    <div class="field"><label for="exN">題數(1–50)</label><input type="number" id="exN" min="1" max="50" value="10"></div>
+    <div class="field"><label for="exScope">範圍</label><select id="exScope"></select></div>
+    <div class="field">
+      <span class="lbl">解析何時看</span>
+      <label class="radio"><input type="radio" name="exReveal" value="now" checked>每題作答後立刻看</label>
+      <label class="radio"><input type="radio" name="exReveal" value="end">整份寫完才統一看</label>
+    </div>
+    <button class="btn" id="exStart">開始考卷</button>
+  </div>
+  <div class="card" id="examRun" hidden>
+    <div class="score" id="exProg"></div>
+    <div class="tag" id="exTag"></div>
+    <div id="exDiagram"></div>
+    <div class="q" id="exQ"></div>
+    <div id="exOpts"></div>
+    <div class="explain" id="exExplain" hidden></div>
+    <div class="btn-row">
+      <button class="btn" id="exNext" hidden>下一題</button>
+      <button class="btn ghost" id="exQuit">放棄考卷</button>
+    </div>
+  </div>
+  <div id="examResult" hidden></div>
+</section>
+</div>
+
+<script>
+/* ===== 工具 ===== */
+function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function pick(arr){return arr[ri(0,arr.length-1)]}
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=ri(0,i);[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+const r2=x=>Math.round(x*100)/100;
+// 正解 + 干擾項(可先給一組「常見錯誤」pool),補滿 4 個不重複選項並洗牌
+function uniqOptions(correct,genDistractor,fmt,pool){
+  fmt = fmt || (x=>String(x));
+  const set=new Set([correct]);
+  if(pool){for(const v of shuffle([...pool])){ if(set.size>=4)break; if(Number.isFinite(v)) set.add(v) }}
+  let guard=0;
+  while(set.size<4 && guard<80){const d=genDistractor(); if(Number.isFinite(d)) set.add(d); guard++}
+  let k=1;
+  while(set.size<4){ set.add(r2(correct+k)); if(set.size<4) set.add(r2(correct-k)); k++ }
+  return shuffle([...set]).map(v=>({value:v,label:fmt(v)}));
+}
+function fixedOptions(values,fmt){
+  fmt = fmt || (x=>String(x));
+  return shuffle([...values]).map(v=>({value:v,label:fmt(v)}));
+}
+function fact(x){let f=1;for(let i=2;i<=x;i++)f*=i;return f}
+function gcd(a,b){return b?gcd(b,a%b):Math.abs(a)}
+function frac(n,d){const g=gcd(n,d);n/=g;d/=g;return d===1?String(n):`${n}/${d}`}
+// 字串型選項(分數等):正解 + 常見錯誤 pool,補滿 4 個
+function strOptions(correct,pool,filler){
+  const set=new Set([correct]);
+  for(const v of shuffle([...pool])){ if(set.size>=4)break; set.add(v) }
+  let g=0; while(set.size<4&&g<80){set.add(filler());g++}
+  return shuffle([...set]).map(v=>({value:v,label:v}));
+}
+function permutations(a){
+  if(a.length<=1) return [a.slice()];
+  const out=[];
+  a.forEach((x,i)=>{permutations([...a.slice(0,i),...a.slice(i+1)]).forEach(p=>out.push([x,...p]))});
+  return out;
+}
+
+/* ===== 空間圖形:展開圖 ===== */
+function spNet(){
+  const symbols=shuffle(['●','▲','■','★','◆','✦']);
+  const pos={top:symbols[0],left:symbols[1],front:symbols[2],right:symbols[3],back:symbols[4],bottom:symbols[5]};
+  const oppOf={top:'bottom',bottom:'top',left:'right',right:'left',front:'back',back:'front'};
+  const cells={top:[1,0],left:[0,1],front:[1,1],right:[2,1],back:[3,1],bottom:[1,2]};
+  const S=64, pad=20;
+  let svg=`<svg viewBox="0 0 ${4*S+2*pad} ${3*S+2*pad}" style="width:100%;max-width:320px;display:block;margin:0 auto 1rem">`;
+  for(const key in cells){
+    const [c,r]=cells[key];
+    const x=pad+c*S, y=pad+r*S;
+    svg+=`<rect x="${x}" y="${y}" width="${S}" height="${S}" rx="4" style="fill:var(--bg);stroke:var(--border)"/>`;
+    svg+=`<text x="${x+S/2}" y="${y+S/2}" text-anchor="middle" dominant-baseline="central" font-size="26" style="fill:var(--text)">${pos[key]}</text>`;
+  }
+  svg+=`</svg>`;
+  const askKey = pick(Object.keys(pos));
+  const answerKey = oppOf[askKey];
+  const answer = pos[answerKey];
+  const others = Object.keys(pos).filter(k=>k!==askKey && k!==answerKey).map(k=>pos[k]);
+  const q = `上圖是一個正方體的展開圖。將它摺成正方體後,與「${pos[askKey]}」那一面相對的是哪一個符號?`;
+  const explain = `展開圖中,同一直線上「中間隔著一格」的兩面,摺起後互為對面(中間排:第1與第3格、第2與第4格;直排:最上與最下)。依此規則,「${pos[askKey]}」摺起後與「${answer}」相對。`;
+  return {sub:'展開圖找對面', q, diagram:svg, answer, options:fixedOptions([answer,...shuffle(others).slice(0,3)]), explain};
+}
+
+/* ===== 空間圖形:旋轉方向 ===== */
+function spTurn(){
+  const dirs=['北','東','南','西'];
+  const nTurns=ri(2,3);
+  const start=ri(0,3);
+  let cur=start;
+  const seq=[];
+  for(let i=0;i<nTurns;i++){
+    const t=pick(['右轉90°','左轉90°','轉180°']);
+    seq.push(t);
+    if(t==='右轉90°') cur=(cur+1)%4;
+    else if(t==='左轉90°') cur=(cur+3)%4;
+    else cur=(cur+2)%4;
+  }
+  const answer=dirs[cur];
+  const q=`小明一開始面向${dirs[start]}方,依序做了以下動作:${seq.join('、')}。請問小明最後面向哪個方向?`;
+  const explain=`以順時針方向 北→東→南→西 追蹤:右轉等於順時針轉一格,左轉等於逆時針轉一格,轉180°等於轉兩格。從「${dirs[start]}」依序套用每個動作後,最終停在「${answer}」。`;
+  return {sub:'旋轉方向', q, answer, options:fixedOptions(dirs), explain};
+}
+
+/* ===== 空間圖形:截面形狀(正方體被一刀切) ===== */
+function cubeSvg(pts){
+  const s=110, X0=30, Yb=185;
+  const P=(x,y,z)=>[X0+s*(x+0.45*y), Yb-s*(z+0.4*y)];
+  let svg=`<svg viewBox="0 0 260 205" style="width:100%;max-width:280px;display:block;margin:0 auto 1rem">`;
+  const V=[];
+  for(const x of [0,1])for(const y of [0,1])for(const z of [0,1])V.push([x,y,z]);
+  for(let a=0;a<8;a++)for(let b=a+1;b<8;b++){
+    const d=V[a].filter((v,i)=>v!==V[b][i]).length;
+    if(d!==1) continue;
+    const hidden=(V[a][0]===0&&V[a][1]===1&&V[a][2]===0)||(V[b][0]===0&&V[b][1]===1&&V[b][2]===0);
+    const [x1,y1]=P(...V[a]), [x2,y2]=P(...V[b]);
+    svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" style="stroke:var(--sub);stroke-width:1.5${hidden?';stroke-dasharray:4 3':''}"/>`;
+  }
+  const poly=pts.map(p=>P(...p).map(n=>r2(n)).join(',')).join(' ');
+  svg+=`<polygon points="${poly}" style="fill:var(--accent);fill-opacity:.28;stroke:var(--accent);stroke-width:2"/>`;
+  pts.forEach(p=>{const [x,y]=P(...p);svg+=`<circle cx="${r2(x)}" cy="${r2(y)}" r="3.5" style="fill:var(--accent)"/>`});
+  return svg+`</svg>`;
+}
+function spCut(){
+  const kind=pick(['tri','rect','sq','hex']);
+  const flips=[ri(0,1),ri(0,1),ri(0,1)];
+  const tr=p=>p.map((v,i)=>flips[i]?1-v:v);
+  const mk=(i,j,k,iv,jv,kv)=>{const p=[0,0,0];p[i]=iv;p[j]=jv;p[k]=kv;return p};
+  let pts, desc, answer, explain;
+  if(kind==='tri'){
+    const V=[ri(0,1),ri(0,1),ri(0,1)];
+    pts=[[1-V[0],V[1],V[2]],[V[0],1-V[1],V[2]],[V[0],V[1],1-V[2]]];
+    desc='切面通過某一個頂點的三個相鄰頂點(等於切下一個角)';
+    answer='正三角形';
+    explain='三個相鄰頂點兩兩之間的距離,都是正方體一個面的對角線(邊長×√2),三邊等長,所以斷面是正三角形。';
+  } else if(kind==='rect'){
+    const i=ri(0,2), [j,k]=[0,1,2].filter(x=>x!==i);
+    const cj=ri(0,1), ck=ri(0,1);
+    pts=[mk(i,j,k,0,cj,ck),mk(i,j,k,1,cj,ck),mk(i,j,k,1,1-cj,1-ck),mk(i,j,k,0,1-cj,1-ck)];
+    desc='切面通過兩條互相平行、位在相對位置(不在同一個面上)的稜,也就是對角面';
+    answer='長方形(但不是正方形)';
+    explain='兩條稜互相平行且等長(長度=邊長),另外兩邊是面對角線(邊長×√2),所以是兩種邊長不同的長方形,不是正方形。';
+  } else if(kind==='sq'){
+    const i=ri(0,2), [j,k]=[0,1,2].filter(x=>x!==i);
+    const t=pick([0.3,0.5,0.7]);
+    pts=[mk(i,j,k,t,0,0),mk(i,j,k,t,1,0),mk(i,j,k,t,1,1),mk(i,j,k,t,0,1)];
+    desc='切面與正方體的某一個面平行';
+    answer='正方形';
+    explain='與一個面平行的切面,會和那個面全等,所以斷面是邊長相同的正方形。';
+  } else {
+    pts=[[1,.5,0],[1,0,.5],[.5,0,1],[0,.5,1],[0,1,.5],[.5,1,0]];
+    desc='切面通過六條稜的中點(切在正方體正中央、垂直於體對角線)';
+    answer='正六邊形';
+    explain='六個中點中,相鄰兩點都在同一個面上,距離都是面對角線的一半,六邊等長且內角都是120°,所以斷面是正六邊形。';
+  }
+  pts=pts.map(tr);
+  const q=`用一刀(一個平面)切過一個正方體,切面的位置是:${desc}。\n圖中色塊是切面的示意。請問切出來的斷面是什麼形狀?`;
+  return {sub:'截面形狀', q, diagram:cubeSvg(pts), answer, options:fixedOptions(['正三角形','正方形','長方形(但不是正方形)','正六邊形']), explain};
+}
+
+/* ===== 空間圖形:三角比 ===== */
+function triSvg(th,lab){
+  const rad=th*Math.PI/180, L=185, A=[40,200];
+  const dx=L*Math.cos(rad), dy=L*Math.sin(rad);
+  const B=[A[0]+dx,A[1]], C=[B[0],A[1]-dy];
+  const txt=(x,y,t,anchor)=>{
+    if(!t) return '';
+    const unk=t==='?';
+    return `<text x="${r2(x)}" y="${r2(y)}" text-anchor="${anchor}" style="fill:${unk?'var(--accent)':'var(--text)'};font-size:15px;${unk?'font-weight:600':''}">${t}</text>`;
+  };
+  const R0=30, ax=A[0]+R0, bx=A[0]+R0*Math.cos(rad), by=A[1]-R0*Math.sin(rad);
+  let svg=`<svg viewBox="0 0 300 230" style="width:100%;max-width:340px;display:block;margin:0 auto 1rem">`;
+  svg+=`<polygon points="${r2(A[0])},${A[1]} ${r2(B[0])},${B[1]} ${r2(C[0])},${r2(C[1])}" style="fill:var(--accent-bg);stroke:var(--sub);stroke-width:1.5"/>`;
+  svg+=`<path d="M${r2(B[0]-12)},${B[1]} L${r2(B[0]-12)},${B[1]-12} L${r2(B[0])},${B[1]-12}" style="fill:none;stroke:var(--sub)"/>`;
+  svg+=`<path d="M${r2(ax)},${A[1]} A${R0},${R0} 0 0 0 ${r2(bx)},${r2(by)}" style="fill:none;stroke:var(--accent);stroke-width:1.5"/>`;
+  svg+=txt(A[0]+54*Math.cos(rad/2), A[1]-54*Math.sin(rad/2)+5, th+'°','middle');
+  svg+=txt((A[0]+C[0])/2-10, (A[1]+C[1])/2-8, lab.hyp,'end');
+  svg+=txt((A[0]+B[0])/2, A[1]+22, lab.horiz,'middle');
+  svg+=txt(B[0]+10, (B[1]+C[1])/2+5, lab.vert,'start');
+  return svg+`</svg>`;
+}
+function spTrig(){
+  const v=ri(0,3);
+  const sinT={30:.5,60:Math.sqrt(3)/2,45:Math.SQRT1_2}, cosT={30:Math.sqrt(3)/2,60:.5,45:Math.SQRT1_2}, tanT={30:Math.sqrt(3)/3,60:Math.sqrt(3),45:1};
+  const f3=x=>Math.round(x*1000)/1000;
+  let q,answer,pool,explain,lab,th;
+  if(v===0){
+    th=pick([30,60]); const L=pick([4,5,6,8,10,12]);
+    answer=r2(L*sinT[th]);
+    pool=[L*cosT[th],L*tanT[th],L/sinT[th],L/cosT[th]].map(r2);
+    q=`一支長 ${L} 公尺的梯子斜靠在牆上,梯子與地面的夾角為 ${th}°。請問梯子頂端離地面約幾公尺(四捨五入至小數點後兩位)?`;
+    explain=`梯子是斜邊,要求的高度是夾角的「對邊」,用 sin:高度 = 斜邊 × sin ${th}° = ${L} × ${f3(sinT[th])} ≈ ${answer} 公尺。`;
+    lab={hyp:L+' 公尺',horiz:'',vert:'?'};
+  } else if(v===1){
+    th=pick([30,60]); const L=pick([4,5,6,8,10,12]);
+    answer=r2(L*cosT[th]);
+    pool=[L*sinT[th],L*tanT[th],L/cosT[th],L/sinT[th]].map(r2);
+    q=`一支長 ${L} 公尺的梯子斜靠在牆上,梯子與地面的夾角為 ${th}°。請問梯腳離牆壁約幾公尺(四捨五入至小數點後兩位)?`;
+    explain=`梯腳到牆的距離是夾角的「鄰邊」,用 cos:距離 = 斜邊 × cos ${th}° = ${L} × ${f3(cosT[th])} ≈ ${answer} 公尺。`;
+    lab={hyp:L+' 公尺',horiz:'?',vert:''};
+  } else if(v===2){
+    th=pick([30,45,60]); const d=pick([10,12,15,20,24,30]);
+    answer=r2(d*tanT[th]);
+    pool=[d/tanT[th],d*sinT[th],d*cosT[th],d/sinT[th]].map(r2);
+    q=`小華站在距離一棵樹 ${d} 公尺的水平地面上,測得樹頂的仰角為 ${th}°(忽略眼睛高度)。請問樹高約幾公尺(四捨五入至小數點後兩位)?`;
+    explain=`水平距離是夾角的「鄰邊」,樹高是「對邊」,用 tan:樹高 = 距離 × tan ${th}° = ${d} × ${f3(tanT[th])} ≈ ${answer} 公尺。`;
+    lab={hyp:'',horiz:d+' 公尺',vert:'?'};
+  } else {
+    th=pick([30,60]); const h=pick([3,4,5,6,8,10]);
+    answer=r2(h/sinT[th]);
+    pool=[h*sinT[th],h/cosT[th],h*cosT[th],h*tanT[th]].map(r2);
+    q=`一段斜坡的垂直高度為 ${h} 公尺,斜坡與水平面的夾角為 ${th}°。請問斜坡的長度約為幾公尺(四捨五入至小數點後兩位)?`;
+    explain=`高度是夾角的「對邊」,斜坡長是「斜邊」,sin ${th}° = 高度 ÷ 斜坡長,所以斜坡長 = ${h} ÷ ${f3(sinT[th])} ≈ ${answer} 公尺。`;
+    lab={hyp:'?',horiz:'',vert:h+' 公尺'};
+  }
+  const distract=()=>r2(answer*(1+ri(-40,40)/100));
+  return {sub:'三角比', q, diagram:triSvg(th,lab), answer, options:uniqOptions(answer,distract,x=>String(x),pool.filter(x=>x>0&&x!==answer)), explain};
+}
+
+/* ===== 空間圖形:簡化投影(俯視圖 + 層數) ===== */
+function projSvg(h){
+  const cell=46, ox=40, oy=34;
+  let svg=`<svg viewBox="0 0 220 200" style="width:100%;max-width:280px;display:block;margin:0 auto 1rem">`;
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+    const x=ox+c*cell, y=oy+r*cell, v=h[r][c];
+    svg+=`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" style="fill:var(--accent);fill-opacity:${v?0.12+v*0.1:0};stroke:var(--border);stroke-width:1.5"/>`;
+    svg+=`<text x="${x+cell/2}" y="${y+cell/2}" text-anchor="middle" dominant-baseline="central" font-size="20" style="fill:${v?'var(--text)':'var(--sub)'}">${v}</text>`;
+  }
+  const lbl=(x,y,t)=>`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="14" style="fill:var(--sub)">${t}</text>`;
+  svg+=lbl(ox+1.5*cell,oy-14,'後(上方)')+lbl(ox+1.5*cell,oy+3*cell+16,'前(下方)')+lbl(ox-18,oy+1.5*cell,'左')+lbl(ox+3*cell+18,oy+1.5*cell,'右');
+  return svg+`</svg>`;
+}
+function spProj(){
+  const h=Array.from({length:3},()=>Array.from({length:3},()=>Math.random()<0.2?0:ri(1,4)));
+  const colMaxes=[0,1,2].map(c=>Math.max(...h.map(row=>row[c])));
+  const rowMaxes=[0,1,2].map(r=>Math.max(...h[r]));
+  const gmax=Math.max(...colMaxes);
+  const total=h.flat().reduce((a,b)=>a+b,0);
+  const intro=`下圖是一堆方塊的「俯視圖」(由上往下看),每格的數字代表該位置疊了幾層方塊,0 表示沒有方塊。\n`;
+  const v=ri(0,2);
+  let q,answer,pool,explain;
+  if(v===0){
+    const c=ri(0,2); answer=colMaxes[c];
+    const colSum=h.reduce((s,row)=>s+row[c],0);
+    pool=[colSum,rowMaxes[c],gmax,answer+1,answer-1];
+    q=intro+`請問從「正面」(圖的下方往上看)看過去,由左數來第 ${c+1} 欄的可見高度是幾層?`;
+    explain=`從正面看,同一直欄的方塊(圖中由上到下)會前後重疊,可見高度取最高的一疊,不是相加。第 ${c+1} 欄各格依序是 ${h.map(r=>r[c]).join('、')},最高為 ${answer} 層。`;
+  } else if(v===1){
+    const k=ri(1,3), r=3-k; answer=rowMaxes[r];
+    const rowSum=h[r].reduce((a,b)=>a+b,0);
+    pool=[rowSum,colMaxes[k-1],gmax,answer+1,answer-1];
+    q=intro+`請問從「右側」往左看過去,由前(圖下方)數來第 ${k} 排的可見高度是幾層?`;
+    explain=`從右側看,同一橫排的方塊(圖中由左到右)會左右重疊,可見高度取最高的一疊。由前數來第 ${k} 排各格依序是 ${h[r].join('、')},最高為 ${answer} 層。`;
+  } else {
+    const front=Math.random()<0.5;
+    const arr=front?colMaxes:rowMaxes, other=front?rowMaxes:colMaxes;
+    answer=arr.reduce((a,b)=>a+b,0);
+    pool=[total,other.reduce((a,b)=>a+b,0),gmax*3,answer+1,answer-1];
+    q=intro+(front
+      ?`請問從「正面」看過去,看到的輪廓共有幾個方格?(把每一欄的可見高度加起來)`
+      :`請問從「右側」看過去,看到的輪廓共有幾個方格?(把每一排的可見高度加起來)`);
+    explain=`${front?'正面':'右側'}看時,各${front?'欄':'排'}的可見高度分別是 ${arr.join('、')}(各取最高的一疊),加起來 = ${answer} 格。`;
+  }
+  const distract=()=>Math.max(0,answer+ri(-3,3));
+  return {sub:'簡化投影', q, diagram:projSvg(h), answer, options:uniqOptions(answer,distract,String,pool.filter(x=>x>=0&&x!==answer)), explain};
+}
+
+/* ===== 語文邏輯:屬性類比 / 削弱論證 ===== */
+function vbAnalogy(){
+  const relations={
+    '工具與用途':[['筆','寫字'],['剪刀','剪裁'],['鑰匙','開鎖'],['相機','拍照'],['尺','測量'],['鍋子','煮菜']],
+    '整體與部分':[['樹','樹枝'],['汽車','輪胎'],['書','書頁'],['手','手指'],['房子','屋頂'],['手錶','錶帶']],
+    '類別與成員':[['水果','蘋果'],['動物','老虎'],['樂器','鋼琴'],['顏色','紅色'],['職業','醫生'],['家具','椅子']],
+    '反義關係':[['快樂','悲傷'],['炎熱','寒冷'],['高大','矮小'],['光明','黑暗'],['勤勞','懶惰'],['堅強','脆弱']],
+    '同義關係':[['美麗','漂亮'],['迅速','快速'],['聰明','機智'],['勇敢','英勇'],['安靜','寂靜'],['開心','愉快']],
+  };
+  const relNames=Object.keys(relations);
+  const relName=pick(relNames);
+  const pairs=shuffle([...relations[relName]]);
+  const [a,b]=pairs[0], [c,d]=pairs[1];
+  const answer=d;
+  const otherPool=relNames.filter(r=>r!==relName).flatMap(r=>relations[r].flat());
+  const distractors=shuffle(otherPool).filter(w=>w!==answer).slice(0,3);
+  const q=`「${a}」之於「${b}」,如同「${c}」之於下列何者?`;
+  const explain=`「${a}」與「${b}」是「${relName}」的關係,依照相同邏輯套用到「${c}」,答案應為「${answer}」。`;
+  return {sub:'屬性類比', q, answer, options:fixedOptions([answer,...distractors]), explain};
+}
+function vbWeaken(){
+  const bank=[
+    {claim:'某城市今年冰淇淋銷量與溺水人數同時上升,因此有人主張「吃冰淇淋會導致溺水」。',
+     weaken:'兩者可能都是因為夏季高溫同時上升,屬於共同原因,並非因果關係。',
+     distract:['今年冰淇淋口味比去年更多樣化。','該城市的游泳池數量比去年增加。','冰淇淋的售價今年略為上漲。']},
+    {claim:'某班學生這學期多運動後,段考成績普遍進步,因此有人主張「運動會提升考試成績」。',
+     weaken:'這學期學校也同時調整了教材難度與複習進度,成績進步可能是教學改變造成的。',
+     distract:['班上有幾位同學特別喜歡運動。','運動場地這學期重新整修過。','段考題目比上學期多了幾題。']},
+    {claim:'某公司新產品上市後業績上升,因此有人主張「這次的廣告策略是業績成長的原因」。',
+     weaken:'同一時間市場上競爭對手的類似產品正好缺貨,顧客可能只是轉而購買這家公司的產品。',
+     distract:['公司今年員工人數增加了一些。','新產品的包裝設計比較精美。','公司總部搬到了新的辦公大樓。']},
+    {claim:'某地區近年犯罪率下降,警察局增加了巡邏次數,因此有人主張「增加巡邏是犯罪率下降的原因」。',
+     weaken:'同一期間當地失業率大幅下降、整體經濟好轉,犯罪率下降也可能是經濟因素造成的。',
+     distract:['該地區今年人口略有成長。','警察局換了新的巡邏車輛。','當地媒體開始大量報導治安新聞。']},
+    {claim:'某研究發現常喝咖啡的人比較常失眠,因此有人主張「喝咖啡會造成失眠」。',
+     weaken:'失眠的人為了白天提神,才會更常喝咖啡,也就是失眠在先、喝咖啡在後。',
+     distract:['咖啡的種類很多,有些咖啡因含量較低。','失眠在現代社會越來越普遍。','許多人習慣早上喝咖啡。']},
+    {claim:'某城市裝設較多監視器的區域犯罪案件也較多,因此有人主張「監視器造成犯罪增加」。',
+     weaken:'政府正是因為這些區域原本犯罪率就高,才優先在那裡裝設監視器。',
+     distract:['監視器的價格逐年下降。','有些居民不喜歡被攝影機拍到。','監視器的畫質已經大幅提升。']},
+    {claim:'某網站的線上民調顯示 90% 的受訪者支持新政策,因此有人主張「全民都支持這項政策」。',
+     weaken:'這份民調只有自願上網填答的人參與,樣本不能代表全體民眾。',
+     distract:['這個民調網站今年的瀏覽量增加了。','新政策預計明年才會實施。','民調問卷共有十道題目。']},
+    {claim:'有人主張「所有在這家店消費過的顧客都會再次光顧」,理由是幾位熟客一直回來購買。',
+     weaken:'調查發現有一批在這家店消費過一次的顧客,之後從來沒有再回來。',
+     distract:['這家店今年新增了會員制度。','熟客大多住在店家附近。','這家店的營業時間比同業長。']},
+  ];
+  const item=pick(bank);
+  const answer=item.weaken;
+  const q=`${item.claim}\n下列何者最能削弱(質疑)上述論證的結論?`;
+  const explain=`削弱論證的關鍵,是找出「結論背後可能還有其他原因」,讓因果關係不再成立。本題中,「${answer}」點出了另一個可能造成相同結果的原因,因此最能削弱原論證;其餘選項與結論的因果關係較無關。`;
+  return {sub:'削弱論證', q, answer, options:fixedOptions([answer,...item.distract]), explain};
+}
+
+/* ===== 語文邏輯:關係整合(雙重否定 / 分類排序 / 親屬編碼) ===== */
+function vbDouble(){
+  const bank=[
+    {s:'他不是沒有來。', a:'他來了。', w:['他沒有來。','他不一定會來。','他不想來。']},
+    {s:'這件事不是不可能。', a:'這件事有可能。', w:['這件事絕對不可能。','這件事一定會發生。','這件事沒有人在意。']},
+    {s:'沒有人不喜歡這首歌。', a:'每個人都喜歡這首歌。', w:['沒有人喜歡這首歌。','只有一個人喜歡這首歌。','不是每個人都喜歡這首歌。']},
+    {s:'他不得不離開。', a:'他必須離開。', w:['他不能離開。','他不想離開。','他可以選擇離開,也可以選擇留下。']},
+    {s:'她無法不答應。', a:'她一定會答應。', w:['她無法答應。','她不想答應。','她可能會答應。']},
+    {s:'並非所有學生都沒有交作業。', a:'至少有一位學生交了作業。', w:['所有學生都交了作業。','沒有學生交作業。','所有學生都沒有交作業。']},
+    {s:'不是每個人都不會游泳。', a:'至少有一個人會游泳。', w:['每個人都會游泳。','沒有人會游泳。','每個人都不會游泳。']},
+    {s:'他沒有一天不練習。', a:'他每天都練習。', w:['他一天都沒有練習。','他偶爾才練習。','他有幾天沒有練習。']},
+    {s:'這題不是不會做。', a:'這題會做。', w:['這題不會做。','這題做不完。','這題不用做。']},
+  ];
+  const it=pick(bank);
+  const q=`「${it.s}」\n下列哪一個選項的意思與這句話相同?`;
+  const explain=`雙重否定是「否定之否定」,兩個否定會互相抵消,變成肯定。「${it.s}」等於「${it.a}」。`;
+  return {sub:'雙重否定', q, answer:it.a, options:fixedOptions([it.a,...it.w]), explain};
+}
+const SORT_ATTRS=[
+  {name:'身高',hi:'高',lo:'矮',up:'由高到矮'},
+  {name:'體重',hi:'重',lo:'輕',up:'由重到輕'},
+  {name:'跑步速度',hi:'快',lo:'慢',up:'由快到慢'},
+  {name:'年紀',hi:'年長',lo:'年輕',up:'由年長到年輕'},
+];
+function vbSort(){
+  const attr=pick(SORT_ATTRS), n=ri(4,5);
+  const names=['甲','乙','丙','丁','戊'].slice(0,n);
+  const order=shuffle([...names]); // order[0] 最大
+  const perms=permutations(names);
+  const consistent=(p,cl)=>{const pos={};p.forEach((x,i)=>pos[x]=i);return cl.every(([hi,lo])=>pos[hi]<pos[lo])};
+  const pairs=[];
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)pairs.push([order[i],order[j]]);
+  shuffle(pairs);
+  const clues=[];
+  for(const p of pairs){
+    clues.push(p);
+    if(perms.filter(x=>consistent(x,clues)).length===1) break;
+  }
+  const lines=clues.map(([hi,lo])=> Math.random()<0.5 ? `${hi}比${lo}${attr.hi}。` : `${lo}比${hi}${attr.lo}。`);
+  const k=ri(1,n);
+  const answer=order[k-1];
+  const q=`${names.join('、')}${n}人比${attr.name}。已知:\n${lines.join('\n')}\n請問依${attr.name}${attr.up}排列,第 ${k} 名是誰?`;
+  const explain=`把所有線索串連起來,可以得到唯一的排序:${order.join(' > ')}(左邊較${attr.hi}、右邊較${attr.lo})。所以${attr.up}的第 ${k} 名是「${answer}」。`;
+  return {sub:'分類排序', q, answer, options:fixedOptions(names), explain};
+}
+const KIN=(()=>{
+  const t=[];
+  const parents=['父親','母親'], sibs=['哥哥','姊姊','弟弟','妹妹'];
+  for(const a of parents)for(const b of parents) t.push([a,b,a==='父親'?(b==='父親'?'祖父':'外祖父'):(b==='父親'?'祖母':'外祖母')]);
+  for(const a of parents)for(const b of sibs) t.push([a,b,a]);
+  const uncle={'哥哥|父親':'伯父','弟弟|父親':'叔叔','姊姊|父親':'姑姑','妹妹|父親':'姑姑','哥哥|母親':'舅舅','弟弟|母親':'舅舅','姊姊|母親':'阿姨','妹妹|母親':'阿姨'};
+  for(const a of sibs)for(const b of parents) t.push([a,b,uncle[a+'|'+b]]);
+  for(const a of ['兒子','女兒'])for(const b of sibs){
+    const brother=(b==='哥哥'||b==='弟弟');
+    t.push([a,b,brother?(a==='兒子'?'姪子':'姪女'):(a==='兒子'?'外甥':'外甥女')]);
+  }
+  for(const a of ['哥哥','姊姊'])for(const b of ['哥哥','姊姊']) t.push([a,b,a]);
+  for(const a of ['弟弟','妹妹'])for(const b of ['弟弟','妹妹']) t.push([a,b,a]);
+  return t;
+})();
+const KIN_GROUPS=[['祖父','外祖父','祖母','外祖母'],['伯父','叔叔','姑姑','舅舅','阿姨'],['姪子','姪女','外甥','外甥女'],['哥哥','姊姊','弟弟','妹妹'],['父親','母親']];
+function vbKin(){
+  const [r1,r2_,ans]=pick(KIN);
+  const grp=KIN_GROUPS.find(g=>g.includes(ans));
+  const all=KIN_GROUPS.flat();
+  let d=shuffle(grp.filter(x=>x!==ans)).slice(0,3);
+  for(const x of shuffle(all)){ if(d.length>=3)break; if(x!==ans&&!d.includes(x)) d.push(x) }
+  const q=`(以下皆為同父同母的親生關係)\n甲是乙的${r1},乙是丙的${r2_}。\n請問甲是丙的什麼關係?`;
+  const explain=`從丙往上推:乙是丙的${r2_},甲是乙的${r1},把兩層關係合起來,甲是丙的「${ans}」。`;
+  return {sub:'親屬編碼', q, answer:ans, options:fixedOptions([ans,...d]), explain};
+}
+
+function vbGen(){
+  const note=`(只考慮親生、直系血親;每個人只有一位親生父親;同一個人可以同時是父親和兒子)\n`;
+  const v=ri(0,2);
+  let q, answer, pool, explain;
+  if(v===0){
+    const k=ri(3,7); answer=k+1; pool=[k,k+2,2*k,k-1];
+    q=note+`一個家族中共有 ${k} 對「父親—兒子」關係(每一對都不同)。請問這個家族最少有幾人?`;
+    explain=`每多一對父子,至少要多一個人(因為每個人只有一位父親)。最少的情況是排成一條 ${k+1} 代的直系鏈,所以最少 ${answer} 人。`;
+  } else if(v===1){
+    const n=ri(3,6); answer=n; pool=[n-1,n+1,2*n-2,n+2];
+    q=note+`一個家族中有 ${n-1} 對父子關係,以及 ${n-2} 對祖孫關係。請問最少有幾人?`;
+    explain=`${n-1} 對父子至少需要 ${n} 人;而一條 ${n} 代的直系鏈剛好有 ${n-1} 對父子、${n-2} 對祖孫,所以最少 ${n} 人。`;
+  } else {
+    const a=ri(2,4), b=ri(a,a+2); answer=b+1; pool=[a+b,b,a+1,b+2];
+    q=note+`一個家族中有 ${a} 位父親、${b} 位兒子。請問最少有幾人?`;
+    explain=`每位兒子都是不同的人,而最年長的那位一定不是兒子,所以人數至少是兒子數 + 1 = ${b}+1 = ${answer};用一條直系鏈再補上多的兒子就能達到,所以最少 ${answer} 人。`;
+  }
+  return {sub:'親屬世代', q, answer, options:uniqOptions(answer,()=>Math.max(2,answer+ri(-3,3)),undefined,pool.filter(x=>x>1&&x!==answer)), explain};
+}
+function vbLetter(){
+  const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ', val=c=>L.indexOf(c)+1;
+  if(Math.random()<0.5){
+    const len=ri(2,4); let w='';
+    for(let i=0;i<len;i++) w+=pick([...L]);
+    const answer=[...w].reduce((t,c)=>t+val(c),0);
+    const pool=[answer-len,answer+len,answer-1,answer+1].filter(x=>x>0&&x!==answer);
+    const q=`若 A=1、B=2、C=3,依此類推到 Z=26。請問字母組合「${w}」各字母對應數字的總和是多少?`;
+    const explain=`${[...w].map(c=>`${c}=${val(c)}`).join('、')},總和 = ${[...w].map(c=>val(c)).join(' + ')} = ${answer}。`;
+    return {sub:'字母序位', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-6,6)),undefined,pool), explain};
+  }
+  const c=pick([...L]), v=val(c), ansL=L[26-v];
+  const set=new Set([ansL,c]);
+  [L[26-v-1],L[26-v+1]].forEach(x=>{if(x)set.add(x)});
+  while(set.size<4) set.add(pick([...L]));
+  const q=`A=1、B=2、…、Z=26。把字母由兩端配對(A 配 Z、B 配 Y、C 配 X……),每一對的數字和都相同。請問與「${c}」配對的字母是哪一個?`;
+  const explain=`A+Z = B+Y = C+X = … = 27,首尾配對的和固定是 27。${c} = ${v},配對字母的數字 = 27−${v} = ${27-v},也就是「${ansL}」。`;
+  return {sub:'字母序位', q, answer:ansL, options:fixedOptions([...set].slice(0,4).includes(ansL)?[...set].slice(0,4):[ansL,...[...set].filter(x=>x!==ansL).slice(0,3)]), explain};
+}
+function vbOdd(){
+  const bank=[
+    {same:['蘋果','香蕉','芭樂'], odd:'紅蘿蔔', common:'水果', why:'是蔬菜(塊根類)'},
+    {same:['麻雀','老鷹','鴿子'], odd:'蝙蝠', common:'鳥類', why:'是哺乳類'},
+    {same:['鯨魚','海豚','海豹'], odd:'鯊魚', common:'哺乳類', why:'是魚類'},
+    {same:['台北','高雄','台中'], odd:'東京', common:'臺灣的城市', why:'是日本的城市'},
+    {same:['正方形','長方形','菱形'], odd:'圓形', common:'四邊形', why:'沒有直邊,不是多邊形'},
+    {same:['2','3','5'], odd:'9', common:'質數', why:'不是質數(9 = 3×3)'},
+    {same:['4','6','9'], odd:'11', common:'合數', why:'是質數'},
+    {same:['銅','鐵','鋁'], odd:'玻璃', common:'金屬', why:'不是金屬'},
+    {same:['地球','火星','金星'], odd:'月球', common:'繞太陽公轉的行星', why:'是繞地球轉的衛星'},
+    {same:['鉛筆','原子筆','毛筆'], odd:'橡皮擦', common:'書寫工具', why:'是擦拭工具'},
+  ];
+  const it=pick(bank);
+  const q=`下列四個選項中,哪一個和其他三個不屬於同一類?`;
+  const explain=`先找出三個的共同屬性:${it.same.join('、')}都是${it.common},只有「${it.odd}」${it.why},所以它是異質項。`;
+  return {sub:'分類異質項', q, answer:it.odd, options:fixedOptions([it.odd,...it.same]), explain};
+}
+
+/* ===== 各章節題目產生器 ===== */
+const gens = {
+  // CH01 數列推理
+  seq(){
+    const type = ri(0,6);
+    const SUB=['等差數列','等比數列','拆奇偶','前項合成','冪次還原','循環餘數定位','二階差'];
+    const sgn=n=>n>=0?`+ ${n}`:`− ${Math.abs(n)}`;
+    let nums=[], answer, explain, pool=null, q=null, distract=null;
+    if(type===0){
+      const start=ri(2,20), step=ri(2,9)*(Math.random()<0.5?1:-1);
+      for(let i=0;i<5;i++) nums.push(start+step*i);
+      answer = start+step*5;
+      explain = `等差數列,相鄰兩項的差固定為 ${step}:${nums[4]} ${sgn(step)} = ${answer}。`;
+    } else if(type===1){
+      const start=ri(2,6), ratio=pick([2,3,-2,-3]);
+      for(let i=0;i<5;i++) nums.push(start*Math.pow(ratio,i));
+      answer = start*Math.pow(ratio,5);
+      explain = ratio>0
+        ? `等比數列,公比為 ${ratio}:每項乘以 ${ratio} 即得下一項,${nums[4]} × ${ratio} = ${answer}。`
+        : `等比數列,公比為 ${ratio}(負數):每次乘以 ${ratio},數值變大、正負號交替,${nums[4]} × (${ratio}) = ${answer}。`;
+      pool=[-answer, nums[4]*Math.abs(ratio)];
+    } else if(type===2){
+      const mk=()=>{
+        if(Math.random()<0.6){
+          const s0=ri(1,10), d=pick([2,3,4,5,-2,-3]);
+          return {f:i=>s0+d*i, rule:`每次 ${d>0?'+':'−'}${Math.abs(d)}`};
+        }
+        const s0=ri(1,4), r=pick([2,3]);
+        return {f:i=>s0*Math.pow(r,i), rule:`每次 ×${r}`};
+      };
+      const A=mk(), B=mk();
+      for(let i=0;i<4;i++){nums.push(A.f(i)); if(i<3) nums.push(B.f(i));}
+      answer=B.f(3);
+      pool=[A.f(3), B.f(2)+(B.f(2)-B.f(1))];
+      explain=`拆奇偶(雙軌):第1、3、5、7項(${[0,1,2,3].map(i=>A.f(i)).join(', ')})是奇數軌,${A.rule};第2、4、6項(${[0,1,2].map(i=>B.f(i)).join(', ')})是偶數軌,${B.rule}。問號是第8項,在偶數軌,所以 = ${answer}。`;
+    } else if(type===3){
+      const k=pick([0,0,1,-1]);
+      const x=ri(2,6), y=ri(2,6);
+      nums=[x,y];
+      for(let i=0;i<3;i++) nums.push(nums[nums.length-1]+nums[nums.length-2]+k);
+      answer=nums[4]+nums[3]+k;
+      const kt = k===0?'':` ${k>0?'+':'−'} 1`;
+      explain=`前項合成:從第三項起,每一項 = 前兩項之和${k===0?'':(k>0?',再加 1':',再減 1')}。例如 ${nums[0]} + ${nums[1]}${kt} = ${nums[2]},所以下一項 = ${nums[3]} + ${nums[4]}${kt} = ${answer}。`;
+    } else if(type===4){
+      const start=ri(2,6);
+      const cube = Math.random()<0.5;
+      for(let i=0;i<5;i++) nums.push(cube? Math.pow(start+i,3) : Math.pow(start+i,2));
+      answer = cube? Math.pow(start+5,3) : Math.pow(start+5,2);
+      explain = cube
+        ? `這是連續整數的立方數列:${start}³, ${start+1}³...,下一項為 ${start+5}³ = ${answer}。`
+        : `這是連續整數的平方數列:${start}², ${start+1}²...,下一項為 ${start+5}² = ${answer}。`;
+    } else if(type===5){
+      const period=ri(3,5);
+      const cycle=shuffle(Array.from({length:30},(_,i)=>i+1)).slice(0,period);
+      for(let i=0;i<period*2;i++) nums.push(cycle[i%period]);
+      const N=ri(15,45), rem=N%period;
+      answer=cycle[(N-1)%period];
+      q=`下列數列會不斷循環:\n${nums.join(', ')}, ...\n請問第 ${N} 項是多少?`;
+      explain=`循環長度是 ${period}(${cycle.join(', ')})。位置 ÷ 循環長度:${N} ÷ ${period} 餘 ${rem}${rem===0?'(餘 0 代表循環的最後一格)':''},對應循環中的第 ${rem===0?period:rem} 個數字 = ${answer}。`;
+      pool=cycle.filter(x=>x!==answer);
+      distract=()=>ri(1,30);
+    } else {
+      const s0=ri(1,10), d0=ri(1,5), dd=pick([1,2,3,-1,-2]);
+      const diffs=[0,1,2,3].map(i=>d0+dd*i);
+      nums=[s0];
+      diffs.forEach(d=>nums.push(nums[nums.length-1]+d));
+      const nd=d0+dd*4;
+      answer=nums[4]+nd;
+      explain=`一階差依序是 ${diffs.join(', ')},不固定;再看二階差(差的差),固定為 ${dd}。下一個一階差 = ${diffs[3]} ${sgn(dd)} = ${nd},所以答案 = ${nums[4]} ${sgn(nd)} = ${answer}。`;
+      pool=[nums[4]+diffs[3], nums[4]+nd+dd];
+    }
+    if(!q) q = `請觀察以下數列,選出下一個最合理的數字:\n${nums.join(', ')}, ?`;
+    if(!distract) distract=()=> answer + ri(-5,5)*(ri(1,3)||1);
+    return {sub:SUB[type], q, answer, options:uniqOptions(answer,distract,undefined,pool), explain};
+  },
+
+  // CH03 真假推理
+  logic(){
+    const type = ri(0,3);
+    if(type===0){
+      const names=['甲','乙','丙'];
+      let liar, statements, consistentSet, tries=0;
+      do{
+        liar=ri(0,2);
+        statements=[];
+        for(let i=0;i<3;i++){
+          let target; do{target=ri(0,2)}while(target===i);
+          const actualTruthful = target!==liar;
+          const claimTruthful = (i===liar)? !actualTruthful : actualTruthful;
+          statements.push({speaker:i, target, claimTruthful});
+        }
+        // 假設 k 是唯一說謊者:k 的話必為假,其他人的話必為真
+        consistentSet = [0,1,2].filter(k=>statements.every(s=>{
+          const actual = s.target!==k;
+          return (s.speaker===k) ? (s.claimTruthful!==actual) : (s.claimTruthful===actual);
+        }));
+        tries++;
+      } while(consistentSet.length!==1 && tries<2000);
+      const answer = names[liar];
+      const lines = statements.map(s=>`${names[s.speaker]}說:「${names[s.target]}${s.claimTruthful?'說的是實話':'在說謊'}。」`);
+      const q = `已知甲、乙、丙三人中「恰有一人說謊」,其餘兩人說的都是實話。\n${lines.join('\n')}\n請問說謊的是誰?`;
+      const explain = `逐一假設某人是說謊者,代入檢查:說謊者的話必須是假的,另外兩人的話必須是真的。只有假設「${answer}說謊」時,三句話才全部一致,其他假設都會產生衝突。`;
+      return {sub:'說謊者推論', q, answer, options:fixedOptions(names), explain};
+    } else if(type===1){
+      const contradictPairs=[
+        ['甲說:「我比乙高。」','乙說:「我比甲高。」'],
+        ['甲說:「今天是星期一。」','乙說:「今天不是星期一,是星期二。」'],
+        ['甲說:「這題答案是A。」','乙說:「這題答案不是A,是B。」'],
+        ['甲說:「箱子裡有球。」','乙說:「箱子是空的,什麼都沒有。」'],
+      ];
+      const compatiblePairs=[
+        ['甲說:「我喜歡蘋果。」','乙說:「我喜歡香蕉。」'],
+        ['甲說:「今天在下雨。」','乙說:「我今天帶了傘。」'],
+        ['甲說:「這間教室有窗戶。」','乙說:「這間教室有門。」'],
+        ['甲說:「這本書是紅色的。」','乙說:「這本書有300頁。」'],
+      ];
+      const extraC=[
+        ['所有技術員都有證照。','小明是技術員,但他沒有證照。'],
+        ['沒有任何一間門市使用光纖。','A 門市正在使用光纖。'],
+        ['這個班的每位學生都通過了考試。','這個班有一位學生沒有通過考試。'],
+      ];
+      const extraP=[
+        ['有些產品有瑕疵。','有些產品沒有瑕疵。'],
+        ['有些學生喜歡數學。','有些學生不喜歡數學。'],
+        ['昨天這間店有營業。','今天這間店沒有營業。'],
+      ];
+      const isContradict = Math.random()<0.5;
+      const [s1,s2] = pick(isContradict?[...contradictPairs,...extraC]:[...compatiblePairs,...extraP]);
+      const answer = isContradict? '矛盾(不能同時為真)' : '不矛盾(可以同時為真)';
+      const q = `${s1}\n${s2}\n請問這兩句話能不能同時成立?`;
+      const explain = isContradict
+        ? `兩句話描述同一件事卻正好一正一反(例如「所有……都……」只要有一個反例就被推翻),不可能同時為真,屬於矛盾。`
+        : `你可以想出一個情境讓兩句話同時成立(描述的是不同對象、不同時間,或兩個「有些」各指不同的人),所以不矛盾。`;
+      return {sub:'矛盾判定', q, answer, options:fixedOptions(['矛盾(不能同時為真)','不矛盾(可以同時為真)']), explain};
+    } else if(type===3){
+      const boxes=['A','B','C'], who=['甲','乙','丙'];
+      const mkEv=st=>l=>st.filter(x=> x.neg ? x.box!==l : x.box===l).length;
+      let st, cand, t, tries=0;
+      do{
+        t=pick([1,2]);
+        st=who.map(()=>({box:pick(boxes), neg:Math.random()<0.5}));
+        const ev0=mkEv(st);
+        cand=boxes.filter(l=>ev0(l)===t);
+        tries++;
+      } while((cand.length!==1 || new Set(st.map(x=>x.box+x.neg)).size<3) && tries<3000);
+      const ev=mkEv(st);
+      const ans=cand[0]+' 箱';
+      const lines=st.map((x,i)=>`${who[i]}說:「獎品${x.neg?'不在':'在'} ${x.box} 箱。」`);
+      const q=`獎品放在 A、B、C 其中一個箱子裡。甲、乙、丙各說了一句話,已知「恰有 ${t} 句為真」。\n${lines.join('\n')}\n請問獎品在哪一個箱子?`;
+      const explain=`逐箱假設並數真話:${boxes.map(l=>`獎品在 ${l} 箱 → ${ev(l)} 句為真`).join(';')}。只有「在 ${cand[0]} 箱」剛好是 ${t} 句為真,所以答案是 ${ans}。`;
+      return {sub:'真假話計數', q, answer:ans, options:fixedOptions(['A 箱','B 箱','C 箱']), explain};
+    } else {
+      const bank=[
+        ['下雨','地面是濕的'], ['用功讀書','考試會通過'], ['生病','要請假'],
+        ['是正方形','是四邊形'], ['年滿18歲','可以投票'], ['沒吃早餐','會肚子餓'],
+      ];
+      const [P,Q]=pick(bank);
+      const answer = `若${Q}不成立,則${P}不成立`;
+      const options = [
+        answer,
+        `若${P}不成立,則${Q}不成立`, // 否命題
+        `若${Q}成立,則${P}成立`,     // 逆命題
+        `若${P}成立,則${Q}不成立`,   // 與原命題矛盾
+      ];
+      const q = `已知敘述:「若${P},則${Q}。」\n請問下列何者與原敘述邏輯上完全等價(逆否命題)?`;
+      const explain = `「若P則Q」的逆否命題是「若非Q則非P」,兩者邏輯上永遠等價;其餘選項是否命題、逆命題或與原句矛盾,邏輯上不等價。`;
+      return {sub:'逆否命題', q, answer, options:fixedOptions(options), explain};
+    }
+  },
+
+  // CH06 空間圖形
+  spatial(){ return [spNet,spTurn,spCut,spTrig,spProj][ri(0,4)](); },
+
+  // CH07 語文邏輯
+  verbal(){ return [vbAnalogy,vbWeaken,vbDouble,vbSort,vbKin,vbGen,vbLetter,vbOdd][ri(0,7)](); },
+
+  // CH04 排列組合
+  perm(){
+    const type = ri(0,5);
+    if(type===0){
+      const n=ri(5,8), r=ri(2,4);
+      const answer = fact(n)/fact(n-r);
+      const q = `從 ${n} 人中選出 ${r} 人排成一列(有順序之分),共有幾種排法?`;
+      const explain = `排列公式 P(n,r)=n!/(n-r)! = ${n}!/(${n-r})! = ${answer}。`;
+      const distract=()=> Math.max(1, Math.round(answer + ri(-Math.round(answer*0.4)-1,Math.round(answer*0.4)+1)));
+      return {sub:'排列', q, answer, options:uniqOptions(answer,distract), explain};
+    } else if(type===1){
+      const n=ri(5,8), r=ri(2,4);
+      const answer = fact(n)/(fact(r)*fact(n-r));
+      const q = `從 ${n} 人中選出 ${r} 人組成一組(不計順序),共有幾種選法?`;
+      const explain = `組合公式 C(n,r)=n!/(r!(n-r)!) = ${answer}。`;
+      const distract=()=> Math.max(1, Math.round(answer + ri(-Math.round(answer*0.4)-1,Math.round(answer*0.4)+1)));
+      return {sub:'組合', q, answer, options:uniqOptions(answer,distract), explain};
+    } else if(type===2){
+      const n=ri(5,8);
+      const answer = fact(n-1);
+      const q = `${n} 人圍成一圈入座(旋轉後相同的座法視為同一種),共有幾種不同的坐法?`;
+      const explain = `圓桌排列先固定一人當基準,其餘 ${n-1} 人排列即可,答案為 (n-1)! = ${n-1}! = ${answer}。`;
+      const distract=()=> Math.max(1, Math.round(answer*(1+ri(-30,30)/100)));
+      return {sub:'環形排列', q, answer, options:uniqOptions(answer,distract), explain};
+    } else if(type===4){
+      const sm=ri(3,11), ways=6-Math.abs(sm-7);
+      const answer=frac(ways,36);
+      const pool=[frac(ways+1,36),frac(Math.max(1,ways-1),36),frac(ways,21),frac(1,11),frac(ways,12)].filter(x=>x!==answer);
+      const q=`同時擲兩顆公正的骰子,點數和為 ${sm} 的機率是多少?(以最簡分數表示)`;
+      const explain=`兩顆骰子共有 6×6 = 36 種等可能的結果(有順序,(1,6) 與 (6,1) 是不同結果)。點數和為 ${sm} 的有 ${ways} 種,所以機率 = ${ways}/36 = ${answer}。`;
+      return {sub:'古典機率', q, answer, options:strOptions(answer,pool,()=>frac(ri(1,12),36)), explain};
+    } else if(type===5){
+      const N=ri(10,40), W=ri(3,N-3);
+      const answer=frac(W*(W-1),N*(N-1));
+      const pool=[frac(W*W,N*N),frac(W,N),frac(W*(W-1),N*N),frac(W*(N-W),N*(N-1))].filter(x=>x!==answer);
+      const q=`某團體共有 ${N} 人,其中女生 ${W} 人。從中隨機抽出 2 人(不放回,同一人不會被抽到兩次),請問兩人都是女生的機率是多少?(以最簡分數表示)`;
+      const explain=`第一次抽到女生的機率是 ${W}/${N};不放回,所以第二次只剩 ${N-1} 人、其中女生 ${W-1} 人,機率是 ${W-1}/${N-1}。兩次相乘 = ${answer}。若誤用放回的 (${W}/${N})² 就會算錯。`;
+      return {sub:'不放回抽樣', q, answer, options:strOptions(answer,pool,()=>frac(ri(1,30),ri(31,90))), explain};
+    } else {
+      const n=ri(5,7);
+      const answer = fact(n) - 2*fact(n-1);
+      const q = `${n} 人排成一列,其中「甲」與「乙」兩人不可以相鄰,共有幾種排法?`;
+      const explain = `先算全部排法 n! = ${n}! = ${fact(n)},再扣掉甲乙相鄰的排法(把兩人綁在一起視為一人,共 2×(n-1)! = 2×${n-1}! = ${2*fact(n-1)} 種),相減即為答案 = ${answer}。`;
+      const distract=()=> Math.max(1, Math.round(answer*(1+ri(-30,30)/100)));
+      return {sub:'不相鄰排列', q, answer, options:uniqOptions(answer,distract), explain};
+    }
+  },
+
+  // CH05 集合 Venn
+  venn(){
+    const type = ri(0,5);
+    if(type<=1){
+      const a=ri(20,50), b=ri(20,50);
+      const inter=ri(5,Math.min(a,b)-2);
+      const union=a+b-inter;
+      const total=union+ri(3,30);
+      const none=total-union;
+      const askUnion = type===0;
+      const answer = askUnion? union : none;
+      const q = askUnion
+        ? `某班 ${total} 人,喜歡爬山的有 ${a} 人,喜歡釣魚的有 ${b} 人,兩者都喜歡的有 ${inter} 人。請問至少喜歡一項(爬山或釣魚)的共有幾人?`
+        : `某班 ${total} 人,喜歡爬山的有 ${a} 人,喜歡釣魚的有 ${b} 人,兩者都喜歡的有 ${inter} 人。請問兩者都不喜歡的有幾人?`;
+      const explain = askUnion
+        ? `聯集 = A + B − 交集 = ${a} + ${b} − ${inter} = ${union}。`
+        : `先求聯集 = ${a}+${b}−${inter} = ${union},圈外人數 = 總數 − 聯集 = ${total} − ${union} = ${answer}。`;
+      const distract=()=> Math.max(0, answer + ri(-10,10));
+      return {sub:askUnion?'兩圈聯集':'兩圈圈外', q, answer, options:uniqOptions(answer,distract), explain};
+    } else if(type===2){
+      const rA=ri(5,15), rB=ri(5,15), rC=ri(5,15), rAB=ri(2,6), rAC=ri(2,6), rBC=ri(2,6), rABC=ri(1,4);
+      const A=rA+rAB+rAC+rABC, B=rB+rAB+rBC+rABC, C=rC+rAC+rBC+rABC;
+      const AB=rAB+rABC, AC=rAC+rABC, BC=rBC+rABC;
+      const union = rA+rB+rC+rAB+rAC+rBC+rABC;
+      const q = `某班同學喜歡爬山、釣魚、露營三項活動的人數如下:\n喜歡爬山 ${A} 人、釣魚 ${B} 人、露營 ${C} 人;\n爬山且釣魚 ${AB} 人、爬山且露營 ${AC} 人、釣魚且露營 ${BC} 人;\n三項都喜歡的有 ${rABC} 人。\n請問至少喜歡一項的共有多少人?`;
+      const explain = `容斥原理:|A∪B∪C| = A+B+C − (A∩B)−(A∩C)−(B∩C) + (A∩B∩C) = ${A}+${B}+${C}−${AB}−${AC}−${BC}+${rABC} = ${union}。`;
+      const distract=()=> Math.max(0, union + ri(-12,12));
+      return {sub:'三圈容斥', q, answer:union, options:uniqOptions(union,distract), explain};
+    } else if(type===4){
+      const a=ri(30,70), b=ri(30,70), c=ri(8,Math.min(a,b)-8);
+      const union=a+b-c, total=union+ri(3,30);
+      const answer=a+b-2*c;
+      const pool=[union,a+b,a-c,b-c,total-union].filter(x=>x>=0&&x!==answer);
+      const q=`某社團共 ${total} 人,喜歡喝茶的有 ${a} 人,喜歡喝咖啡的有 ${b} 人,兩種都喜歡的有 ${c} 人。請問「恰好只喜歡其中一種」的共有幾人?`;
+      const explain=`只喜歡茶 = ${a}−${c} = ${a-c};只喜歡咖啡 = ${b}−${c} = ${b-c};相加 = ${answer}(也就是 A + B − 2×交集)。`;
+      return {sub:'恰好一項', q, answer, options:uniqOptions(answer,()=>Math.max(0,answer+ri(-10,10)),undefined,pool), explain};
+    } else if(type===5){
+      const N=ri(60,120);
+      const a=ri(Math.ceil(N*0.55),Math.floor(N*0.8)), b=ri(Math.ceil(N*0.55),Math.floor(N*0.8));
+      const askMin=Math.random()<0.5;
+      const answer=askMin? a+b-N : Math.min(a,b);
+      const pool=(askMin? [Math.min(a,b),a+b,Math.abs(a-b),0] : [a+b-N,a+b,Math.max(a,b),Math.abs(a-b)]).filter(x=>x>=0&&x!==answer);
+      const q=`全班 ${N} 人,參加 A 活動的有 ${a} 人,參加 B 活動的有 ${b} 人(每個人可以不參加、只參加一個,或兩個都參加)。請問「兩個活動都參加」的人數,${askMin?'最少':'最多'}可能是多少人?`;
+      const explain=askMin
+        ? `兩個活動的人數相加 ${a}+${b} = ${a+b},超過全班 ${N} 人,超出的 ${a+b-N} 人一定重疊,所以交集最少 = max(0, A+B−N) = ${answer} 人。`
+        : `交集不可能比較小的集合還大,上限 = min(${a}, ${b}) = ${answer};讓小圈完全放進大圈就能達到。`;
+      return {sub:'極值判定', q, answer, options:uniqOptions(answer,()=>Math.max(0,answer+ri(-8,8)),undefined,pool), explain};
+    } else {
+      const isMutex = Math.random()<0.5;
+      const a=ri(10,30), b=ri(10,30);
+      const inter = isMutex? 0 : ri(1,Math.min(a,b));
+      const q = `某調查中,事件A有 ${a} 人,事件B有 ${b} 人,兩者同時發生的有 ${inter} 人。請問事件A與事件B是否互斥?`;
+      const answer = isMutex? '互斥(交集為0)' : '不互斥(交集不為0)';
+      const explain = `兩事件互斥的定義是交集為0,也就是不可能同時發生。本題交集為 ${inter}${isMutex? ',因此互斥。' : ',不等於0,因此不互斥。'}`;
+      return {sub:'互斥判定', q, answer, options:fixedOptions(['互斥(交集為0)','不互斥(交集不為0)']), explain};
+    }
+  },
+
+  // CH08 統計數據
+  stats(){
+    const t2=ri(0,4);
+    if(t2===3){
+      let d, mode, mx, tries=0;
+      do{
+        d=Array.from({length:ri(7,10)},()=>ri(1,9));
+        const cnt={}; d.forEach(x=>cnt[x]=(cnt[x]||0)+1);
+        mx=Math.max(...Object.values(cnt));
+        const modes=Object.keys(cnt).filter(k=>cnt[k]===mx);
+        mode=+modes[0];
+        if(mx>=2&&modes.length===1) break;
+        tries++;
+      }while(tries<2000);
+      const q=`某組資料為:${d.join(', ')}\n請問這組資料的眾數是多少?`;
+      const explain=`眾數是出現次數最多的數。數一數,${mode} 出現了 ${mx} 次,比其他數都多,所以眾數 = ${mode}。`;
+      return {sub:'眾數', q, answer:mode, options:uniqOptions(mode,()=>ri(1,9),undefined,[...new Set(d)].filter(x=>x!==mode)), explain};
+    }
+    if(t2===4){
+      const n1=ri(10,40); let n2; do{n2=ri(10,40)}while(n2===n1);
+      const m1=ri(50,95); let m2; do{m2=ri(50,95)}while(m2===m1);
+      const answer=r2((n1*m1+n2*m2)/(n1+n2));
+      const naive=r2((m1+m2)/2);
+      const q=`甲班 ${n1} 人,平均 ${m1} 分;乙班 ${n2} 人,平均 ${m2} 分。請問兩班合併後的總平均約為多少分(四捨五入至小數點後兩位)?`;
+      const explain=`人數不同,要用加權平均:總分 ÷ 總人數 = (${n1}×${m1} + ${n2}×${m2}) ÷ (${n1}+${n2}) ≈ ${answer}。不能直接把 ${m1} 和 ${m2} 平均(那會得到 ${naive})。`;
+      return {sub:'加權平均', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-6,6)),undefined,[naive].filter(x=>x!==answer)), explain};
+    }
+    const n=ri(5,7);
+    const data=Array.from({length:n},()=>ri(10,99));
+    const type=ri(0,2);
+    let answer, explain, q, sub;
+    if(type===0){
+      const sum=data.reduce((a,b)=>a+b,0);
+      answer = r2(sum/n);
+      explain = `平均數 = 總和 ÷ 個數 = ${sum} ÷ ${n} = ${answer}。`;
+      q = `某組資料為:${data.join(', ')}\n請問這組資料的平均數是多少(四捨五入至小數點後兩位)?`;
+      sub='平均數';
+    } else if(type===1){
+      const sorted=[...data].sort((a,b)=>a-b);
+      const mid=Math.floor(n/2);
+      answer = n%2===1? sorted[mid] : (sorted[mid-1]+sorted[mid])/2;
+      explain = `先由小到大排序:${sorted.join(', ')},取中間值即為中位數 = ${answer}。`;
+      q = `某組資料為:${data.join(', ')}\n請問這組資料的中位數是多少?`;
+      sub='中位數';
+    } else {
+      const mean=data.reduce((a,b)=>a+b,0)/n;
+      const variance=data.reduce((s,x)=>s+Math.pow(x-mean,2),0)/n;
+      answer = r2(variance);
+      explain = `先求平均數 = ${r2(mean)},再求每個數與平均數的差的平方和,除以個數 n,即為變異數 ≈ ${answer}(標準差則再開根號)。`;
+      q = `某組資料為:${data.join(', ')}\n請問這組資料的變異數(以母體計算,四捨五入至小數點後兩位)是多少?`;
+      sub='變異數';
+    }
+    const distract=()=> r2(answer + ri(-8,8));
+    return {sub, q, answer, options:uniqOptions(answer,distract), explain};
+  },
+
+  // CH09 商業數學
+  interest(){
+    const type=ri(0,5);
+    if(type===0){
+      const p=ri(2,10)*10000, rate=ri(2,8), years=ri(2,4);
+      const answer = Math.round(p*Math.pow(1+rate/100, years));
+      const q = `本金 ${p.toLocaleString()} 元,年利率 ${rate}%,採複利計息,請問 ${years} 年後本利和約為多少元(四捨五入至整數)?`;
+      const explain = `複利公式:本利和 = 本金 × (1+利率)^年數 = ${p.toLocaleString()} × (1+${rate/100})^${years} ≈ ${answer.toLocaleString()} 元。`;
+      const distract=()=> Math.round(answer*(1+ri(-15,15)/100));
+      return {sub:'複利', q, answer, options:uniqOptions(answer,distract,x=>x.toLocaleString()), explain};
+    } else if(type===1){
+      const fc=ri(5,20)*1000, price=ri(50,150), vc=ri(10,price-20);
+      const answer = Math.ceil(fc/(price-vc));
+      const q = `某商品固定成本 ${fc.toLocaleString()} 元,每件售價 ${price} 元,每件變動成本 ${vc} 元。請問至少要賣出幾件才能達到損益兩平(不虧不賺)?`;
+      const explain = `損益兩平點 Q = 固定成本 ÷ (售價−變動成本) = ${fc.toLocaleString()} ÷ (${price}−${vc}) ≈ ${r2(fc/(price-vc))},無條件進位至整數件 = ${answer} 件。`;
+      const distract=()=> Math.max(1, answer+ri(-20,20));
+      return {sub:'損益兩平', q, answer, options:uniqOptions(answer,distract), explain};
+    } else if(type===2){
+      const cost=ri(50,200), margin=ri(10,60);
+      const price = Math.round(cost/(1-margin/100));
+      const answer = Math.round((price-cost)/price*100);
+      const q = `某商品成本 ${cost} 元,售價 ${price} 元。請問毛利率(以售價為分母,四捨五入至整數%)約為多少?`;
+      const explain = `毛利率 = (售價−成本) ÷ 售價 × 100% = (${price}−${cost}) ÷ ${price} × 100% ≈ ${answer}%。`;
+      const distract=()=> Math.max(1, Math.min(95, answer+ri(-15,15)));
+      return {sub:'毛利率', q, answer, options:uniqOptions(answer,distract,x=>x+'%'), explain};
+    } else if(type===4){
+      const fc=ri(5,20)*1000, price=ri(50,150), vc=ri(10,price-20), tg=ri(2,10)*1000;
+      const unit=price-vc;
+      const answer=Math.ceil((fc+tg)/unit);
+      const pool=[Math.ceil(fc/unit),Math.ceil(tg/unit),Math.ceil((fc+tg)/price)].filter(x=>x!==answer);
+      const q=`某商品固定成本 ${fc.toLocaleString()} 元,每件售價 ${price} 元,每件變動成本 ${vc} 元。若想賺到 ${tg.toLocaleString()} 元的利潤,至少要賣出幾件?`;
+      const explain=`每件貢獻 = ${price}−${vc} = ${unit} 元。要補回固定成本再賺利潤,總共需要 ${fc.toLocaleString()}+${tg.toLocaleString()} = ${(fc+tg).toLocaleString()} 元,件數 = ${(fc+tg).toLocaleString()} ÷ ${unit} ≈ ${r2((fc+tg)/unit)},無條件進位 = ${answer} 件。`;
+      return {sub:'目標利潤', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-25,25)),undefined,pool), explain};
+    } else if(type===5){
+      const bill=pick([500,1000,2000]);
+      const price=ri(3,bill/50-4)*50;
+      const cost=Math.max(10,Math.round(price*ri(50,80)/100/10)*10);
+      const change=bill-price, loss=cost+change;
+      const pool=[bill,cost,change,bill+cost,price].filter(x=>x!==loss);
+      const q=`顧客拿一張 ${bill} 元的假鈔,買了一件售價 ${price} 元(成本 ${cost} 元)的商品,店家找了真鈔 ${change} 元給他。假鈔沒有任何價值,請問店家實際損失多少元?`;
+      const explain=`店家真正流出去的只有兩樣:商品成本 ${cost} 元,加上找出去的真現金 ${change} 元,損失 = ${cost}+${change} = ${loss} 元。假鈔不算收入,售價 ${price} 元也不是額外損失,不能再重複計算一次。`;
+      return {sub:'交易損失', q, answer:loss, options:uniqOptions(loss,()=>Math.max(1,loss+ri(-10,10)*10),undefined,pool), explain};
+    } else {
+      const fv=ri(5,20)*10000, rate=ri(2,8), years=ri(2,4);
+      const answer = Math.round(fv/Math.pow(1+rate/100, years));
+      const q = `預計 ${years} 年後可以拿到 ${fv.toLocaleString()} 元,年利率(折現率)為 ${rate}%,請問這筆錢的現值約為多少元(四捨五入至整數)?`;
+      const explain = `現值公式:PV = 未來值 ÷ (1+利率)^年數 = ${fv.toLocaleString()} ÷ (1+${rate/100})^${years} ≈ ${answer.toLocaleString()} 元。`;
+      const distract=()=> Math.round(answer*(1+ri(-15,15)/100));
+      return {sub:'現值折現', q, answer, options:uniqOptions(answer,distract,x=>x.toLocaleString()), explain};
+    }
+  },
+
+  // CH10 函數建模
+  func(){
+    const type=ri(0,4);
+    if(type===0){
+      const a=ri(2,6), b=ri(-10,10), x0=ri(2,9);
+      const answer = a*x0+b;
+      const bs = b===0 ? '' : ` ${b>0?'+':'−'} ${Math.abs(b)}`;
+      const q = `已知函數 f(x) = ${a}x${bs},請問 f(${x0}) 的值是多少?`;
+      const explain = `代入 x=${x0}: f(${x0}) = ${a}×${x0}${bs} = ${answer}。`;
+      const distract=()=> answer + ri(-10,10);
+      return {sub:'線性函數', q, answer, options:uniqOptions(answer,distract), explain};
+    } else if(type===1){
+      const a=pick([1,2,3,-1,-2]), b=ri(-10,10)*2;
+      const c=ri(-10,10);
+      const vx = r2(-b/(2*a)) + 0;
+      const as = a===1?'' : a===-1?'−' : (a<0?'−'+Math.abs(a):String(a));
+      const bs = b===0 ? '' : ` ${b>0?'+':'−'} ${Math.abs(b)==1?'':Math.abs(b)}x`;
+      const cs = c===0 ? '' : ` ${c>0?'+':'−'} ${Math.abs(c)}`;
+      const q = `已知二次函數 f(x) = ${as}x²${bs}${cs},請問其頂點的 x 座標是多少(四捨五入至小數點後兩位)?`;
+      const explain = `二次函數 ax²+bx+c 的頂點 x 座標為 −b ÷ (2a) = −(${b}) ÷ (2×${a}) = ${vx}。`;
+      const distract=()=> r2(vx+ri(-4,4));
+      return {sub:'二次函數頂點', q, answer:vx, options:uniqOptions(vx,distract), explain};
+    } else if(type===3){
+      const a=ri(1,4), x0=ri(4,25), isMax=Math.random()<0.5;
+      const as=a===1?'':String(a), b=2*a*x0;
+      if(isMax){
+        const answer=a*x0*x0;
+        const pool=[x0,b,answer+a*x0,answer-a*x0].filter(x=>x>0&&x!==answer);
+        const q=`某商品的收益函數為 R(x) = −${as}x² + ${b}x(x 為定價,單位:元)。請問最大收益是多少元?`;
+        const explain=`a = −${a} < 0,開口向下,頂點是最大值。頂點 x = −${b} ÷ (2×(−${a})) = ${x0};再代回 R(${x0}) = −${a}×${x0}² + ${b}×${x0} = ${answer}。(只算出 x=${x0} 還不是最大收益。)`;
+        return {sub:'二次極值', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-5,5)*a*x0),undefined,pool), explain};
+      } else {
+        const c=a*x0*x0+ri(10,200), answer=c-a*x0*x0;
+        const pool=[x0,c,answer+a*x0,answer-a*x0].filter(x=>x>0&&x!==answer);
+        const q=`某工廠的成本函數為 C(x) = ${as}x² − ${b}x + ${c}(x 為產量)。請問最低成本是多少?`;
+        const explain=`a = ${a} > 0,開口向上,頂點是最小值。頂點 x = ${b} ÷ (2×${a}) = ${x0};再代回 C(${x0}) = ${a}×${x0}² − ${b}×${x0} + ${c} = ${answer}。`;
+        return {sub:'二次極值', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-5,5)*a*x0),undefined,pool), explain};
+      }
+    } else if(type===4){
+      const hi=ri(3,8), lo=ri(1,hi-1), dd=hi-lo;
+      const answer=Math.pow(10,dd);
+      const pool=[10*dd,Math.pow(10,dd+1),Math.pow(10,Math.max(0,dd-1)),dd].filter(x=>x!==answer);
+      const q=`某指標採對數尺度,每差 1 級,數值就相差 10 倍。甲是 ${hi} 級,乙是 ${lo} 級,請問甲的數值是乙的幾倍?`;
+      const explain=`對數尺度差 1 級是「乘以 10」,不是「加 10」。差了 ${hi}−${lo} = ${dd} 級,就乘 ${dd} 次 10,倍數 = 10^${dd} = ${answer.toLocaleString()} 倍。`;
+      return {sub:'對數尺度', q, answer, options:uniqOptions(answer,()=>Math.pow(10,ri(0,6)),x=>x.toLocaleString(),pool), explain};
+    } else {
+      const base=ri(5,15)*10, threshold=ri(50,100), rate2=ri(2,6);
+      const usage=threshold+ri(10,60);
+      const answer = base + (usage-threshold)*rate2;
+      const q = `某水費方案:用量在 ${threshold} 度以內,基本費為 ${base} 元;超過 ${threshold} 度的部分,每度加收 ${rate2} 元。若某月用量為 ${usage} 度,請問總費用是多少元?`;
+      const explain = `先繳基本費 ${base} 元,超過門檻的用量為 ${usage}−${threshold}=${usage-threshold} 度,每度 ${rate2} 元,超額費用 = ${(usage-threshold)*rate2} 元,總費用 = ${base}+${(usage-threshold)*rate2} = ${answer} 元。`;
+      const distract=()=> Math.max(base, answer+ri(-30,30));
+      return {sub:'分段計費', q, answer, options:uniqOptions(answer,distract), explain};
+    }
+  },
+
+  // CH02 應用計算
+  work(){
+    const type=ri(0,9);
+    if(type===0){
+      const a=ri(4,12), b=ri(4,12);
+      const days = r2(1/(1/a+1/b));
+      const q = `甲單獨完成一項工作需 ${a} 天,乙單獨完成需 ${b} 天。兩人合作,請問約幾天可以完成(四捨五入至小數點後兩位)?`;
+      const explain = `合作工作天數 = 1 ÷ (1/${a} + 1/${b}) ≈ ${days} 天。`;
+      const distract=()=> r2(days+ri(-2,2)*0.5+0.3);
+      return {sub:'工程效率', q, answer:days, options:uniqOptions(days,distract), explain};
+    } else if(type===1){
+      const va=ri(100,400), ca=ri(5,30), vb=ri(100,400), cb=ri(5,30);
+      const mix = r2((va*ca+vb*cb)/(va+vb));
+      const q = `將濃度 ${ca}% 的溶液 ${va} 毫升,與濃度 ${cb}% 的溶液 ${vb} 毫升混合,請問混合後的濃度約為多少%(四捨五入至小數點後兩位)?`;
+      const explain = `先算溶質總量 = ${va}×${ca}% + ${vb}×${cb}%,再除以總體積 ${va+vb} 毫升,即為混合後濃度 ≈ ${mix}%。`;
+      const distract=()=> r2(mix+ri(-5,5));
+      return {sub:'濃度混合', q, answer:mix, options:uniqOptions(mix,distract,x=>x+'%'), explain};
+    } else if(type===2){
+      if(Math.random()<0.5){
+        const v1=ri(4,8), v2=ri(v1+2,v1+10), d=ri(10,50);
+        const t=r2(d/(v2-v1));
+        const q = `甲在乙前方 ${d} 公里處,甲以時速 ${v1} 公里前進,乙以時速 ${v2} 公里同向追趕。請問乙需要多久才能追上甲(小時,四捨五入至小數點後兩位)?`;
+        const explain = `同向追趕,相對速度為兩者速度差 = ${v2}−${v1} = ${v2-v1} 公里/小時。追上所需時間 = 距離 ÷ 相對速度 = ${d} ÷ ${v2-v1} ≈ ${t} 小時。`;
+        const distract=()=> r2(t+ri(-2,2)*0.5+0.2);
+        return {sub:'追趕相遇', q, answer:t, options:uniqOptions(t,distract), explain};
+      } else {
+        const v1=ri(4,10), v2=ri(4,10), d=ri(20,80);
+        const t=r2(d/(v1+v2));
+        const q = `甲、乙兩地相距 ${d} 公里,A從甲地、B從乙地同時出發相向而行,A時速 ${v1} 公里,B時速 ${v2} 公里。請問兩人多久後會相遇(小時,四捨五入至小數點後兩位)?`;
+        const explain = `相向而行,相對速度為兩者速度和 = ${v1}+${v2} = ${v1+v2} 公里/小時。相遇時間 = 距離 ÷ 相對速度 = ${d} ÷ ${v1+v2} ≈ ${t} 小時。`;
+        const distract=()=> r2(t+ri(-2,2)*0.5+0.2);
+        return {sub:'追趕相遇', q, answer:t, options:uniqOptions(t,distract), explain};
+      }
+    } else if(type===4){
+      const v=ri(8,20), w=ri(2,6), d=ri(2,8)*10, down=v+w, up=v-w, k=ri(0,2);
+      let q, answer, pool, explain;
+      if(k===0){
+        answer=r2(d/down); pool=[r2(d/v),r2(d/up),r2(d/w)];
+        q=`船在靜水中的速度為 ${v} 公里/小時,水流速度為 ${w} 公里/小時。這艘船順流行駛 ${d} 公里,需要幾小時(四捨五入至小數點後兩位)?`;
+        explain=`順流的實際速度 = 船速 + 水速 = ${v}+${w} = ${down} 公里/小時,時間 = ${d} ÷ ${down} ≈ ${answer} 小時。`;
+      } else if(k===1){
+        answer=r2(d/up); pool=[r2(d/v),r2(d/down),r2(d/w)];
+        q=`船在靜水中的速度為 ${v} 公里/小時,水流速度為 ${w} 公里/小時。這艘船逆流行駛 ${d} 公里,需要幾小時(四捨五入至小數點後兩位)?`;
+        explain=`逆流的實際速度 = 船速 − 水速 = ${v}−${w} = ${up} 公里/小時,時間 = ${d} ÷ ${up} ≈ ${answer} 小時。`;
+      } else {
+        answer=r2(d/down+d/up); pool=[r2(2*d/v),r2(d/down),r2(d/up)];
+        q=`船在靜水中的速度為 ${v} 公里/小時,水流速度為 ${w} 公里/小時。這艘船從甲地順流到乙地(相距 ${d} 公里),再逆流回甲地,往返總共需要幾小時(四捨五入至小數點後兩位)?`;
+        explain=`順流時間 = ${d} ÷ ${down},逆流時間 = ${d} ÷ ${up},相加 ≈ ${answer} 小時。不能用靜水船速直接算 2×${d}÷${v}。`;
+      }
+      return {sub:'流水行船', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-3,3)*0.5+0.2),undefined,pool.filter(x=>x!==answer)), explain};
+    } else if(type===5){
+      const sp=pick([2,3,4,5,6,8,10]), n=ri(5,20), L=sp*n, k=ri(0,2);
+      let q, answer, pool, explain;
+      if(k===0){
+        answer=n+1; pool=[n,n+2,2*n];
+        q=`一條長 ${L} 公尺的直路,每隔 ${sp} 公尺種一棵樹,起點和終點都要種,共需要幾棵樹?`;
+        explain=`間隔數 = ${L} ÷ ${sp} = ${n}。兩端都種時,棵數 = 間隔數 + 1 = ${answer} 棵。`;
+      } else if(k===1){
+        answer=n; pool=[n+1,n-1,n+2];
+        q=`周長 ${L} 公尺的圓形池塘,沿著池邊每隔 ${sp} 公尺種一棵樹,共需要幾棵樹?`;
+        explain=`環形沒有端點,棵數 = 間隔數 = ${L} ÷ ${sp} = ${answer} 棵。`;
+      } else {
+        answer=n; pool=[n+1,n-1,n+2];
+        q=`一條長 ${L} 公尺的直路,每隔 ${sp} 公尺種一棵樹,起點要種、終點不種,共需要幾棵樹?`;
+        explain=`只種一端時,棵數 = 間隔數 = ${L} ÷ ${sp} = ${answer} 棵。`;
+      }
+      return {sub:'植樹間隔', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-3,3)),undefined,pool.filter(x=>x>0&&x!==answer)), explain};
+    } else if(type===6){
+      const k=ri(0,2);
+      let q, answer, pool, explain;
+      if(k===0){
+        const v=ri(1,10)*18; answer=v*5/18; pool=[r2(v*3.6),r2(v/60),r2(v*18/5)];
+        q=`時速 ${v} 公里,換算成每秒幾公尺?`;
+        explain=`1 公里/小時 = 1000 公尺 ÷ 3600 秒 = 5/18 公尺/秒,所以 ${v} × 5/18 = ${answer} 公尺/秒。`;
+      } else if(k===1){
+        const v=ri(1,10)*5; answer=v*18/5; pool=[r2(v*5/18),v*60,r2(v/3.6/3.6)];
+        q=`每秒 ${v} 公尺,換算成時速幾公里?`;
+        explain=`1 公尺/秒 = 3.6 公里/小時 = 18/5 公里/小時,所以 ${v} × 18/5 = ${answer} 公里/小時。`;
+      } else {
+        const m=ri(1,9), sc=ri(1,5)*10; answer=m*60+sc; pool=[m*100+sc,m*60,m+sc];
+        q=`${m} 分 ${sc} 秒等於幾秒?`;
+        explain=`1 分 = 60 秒,所以 ${m}×60 + ${sc} = ${answer} 秒(分和秒不是 100 進位)。`;
+      }
+      return {sub:'單位換算', q, answer, options:uniqOptions(answer,()=>r2(answer*(1+ri(-30,30)/100)),undefined,pool.filter(x=>x>0&&x!==answer)), explain};
+    } else if(type===7){
+      const parts=[ri(1,5),ri(1,5),ri(1,5)], sum=parts[0]+parts[1]+parts[2];
+      const unit=ri(5,40)*10, T=sum*unit, idx=ri(0,2), nm=['甲','乙','丙'][idx];
+      const answer=parts[idx]*unit;
+      const pool=[T/3,unit,Math.round(T*parts[idx]/(sum-parts[idx]||1))].filter(x=>x!==answer);
+      const q=`甲、乙、丙三人依 ${parts.join(':')} 的比例分 ${T.toLocaleString()} 元,請問${nm}分到多少元?`;
+      const explain=`總份數 = ${parts.join('+')} = ${sum};每一份 = ${T.toLocaleString()} ÷ ${sum} = ${unit} 元;${nm}佔 ${parts[idx]} 份,所以 ${parts[idx]}×${unit} = ${answer.toLocaleString()} 元。`;
+      return {sub:'比例分配', q, answer, options:uniqOptions(answer,()=>Math.max(10,answer+ri(-5,5)*unit),x=>x.toLocaleString(),pool), explain};
+    } else if(type===8){
+      const P=[10,20,25,30,40,50], p=pick(P), q2=pick(P), k=ri(0,1);
+      let q, answer, pool, explain;
+      if(k===0){
+        answer=r2((1+p/100)*(1+q2/100)*100-100); pool=[p+q2,r2(p*q2/100),Math.abs(p-q2)];
+        q=`一個長方形的長增加 ${p}%、寬增加 ${q2}%,請問面積增加百分之幾?`;
+        explain=`面積 = 長 × 寬,新面積是原來的 (1+${p/100}) × (1+${q2/100}) = ${r2((1+p/100)*(1+q2/100))} 倍,也就是增加 ${answer}%。不是 ${p}%+${q2}%。`;
+      } else {
+        answer=r2((1+p/100)*(1-q2/100)*100); pool=[100+p-q2,100+p,100-q2];
+        q=`某商品單價上漲 ${p}%,但購買數量減少 ${q2}%。請問總花費變成原來的百分之幾?`;
+        explain=`總花費 = 單價 × 數量,新花費是原來的 (1+${p/100}) × (1−${q2/100}) = ${r2((1+p/100)*(1-q2/100))} 倍,也就是 ${answer}%。不能把 +${p}% 和 −${q2}% 直接相加減。`;
+      }
+      return {sub:'百分比變化', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-12,12)),x=>String(x),pool.filter(x=>x!==answer)), explain};
+    } else if(type===9){
+      const b=ri(5,15), kk=pick([2,3]), x=ri(2,12), a=kk*(b+x)-x;
+      const pool=[a-b,b+x,x+1,x-1,a-kk*b].filter(v=>v>0&&v!==x);
+      const q=`爸爸現在 ${a} 歲,兒子現在 ${b} 歲。請問幾年後,爸爸的年齡會是兒子的 ${kk} 倍?`;
+      const explain=`年齡差永遠不變:${a}−${b} = ${a-b}。爸爸是兒子的 ${kk} 倍時,年齡差 = (${kk}−1) 倍兒子的年齡,所以那時兒子 = ${a-b} ÷ ${kk-1} = ${(a-b)/(kk-1)} 歲,比現在大 ${(a-b)/(kk-1)}−${b} = ${x} 歲,也就是 ${x} 年後。`;
+      return {sub:'年齡問題', q, answer:x, options:uniqOptions(x,()=>Math.max(1,x+ri(-4,4)),undefined,pool), explain};
+    } else {
+      const v1=ri(40,80), v2=ri(40,80), d1=ri(20,100), d2=ri(20,100);
+      const avg = r2((d1+d2)/(d1/v1+d2/v2));
+      const q = `小明開車,第一段 ${d1} 公里以時速 ${v1} 公里行駛,第二段 ${d2} 公里以時速 ${v2} 公里行駛。請問全程的平均速度約為多少(公里/小時,四捨五入至小數點後兩位)?`;
+      const explain = `平均速度 = 總距離 ÷ 總時間 = (${d1}+${d2}) ÷ (${d1}/${v1}+${d2}/${v2}) ≈ ${avg} 公里/小時——注意不是把兩個速度直接平均。`;
+      const distract=()=> r2(avg+ri(-10,10));
+      return {sub:'平均速度', q, answer:avg, options:uniqOptions(avg,distract), explain};
+    }
+  }
+};
+
+const CHAPTERS = [
+  {id:'seq',      name:'數列推理', subs:['等差數列','等比數列','拆奇偶','前項合成','冪次還原','循環餘數定位','二階差']},
+  {id:'logic',    name:'真假推理', subs:['說謊者推論','矛盾判定','逆否命題','真假話計數']},
+  {id:'perm',     name:'排列組合', subs:['排列','組合','環形排列','不相鄰排列','古典機率','不放回抽樣']},
+  {id:'venn',     name:'集合 Venn', subs:['兩圈聯集','兩圈圈外','三圈容斥','互斥判定','恰好一項','極值判定']},
+  {id:'spatial',  name:'空間圖形', subs:['展開圖找對面','旋轉方向','截面形狀','三角比','簡化投影']},
+  {id:'verbal',   name:'語文邏輯', subs:['屬性類比','削弱論證','雙重否定','分類排序','親屬編碼','親屬世代','字母序位','分類異質項']},
+  {id:'stats',    name:'統計數據', subs:['平均數','中位數','變異數','眾數','加權平均']},
+  {id:'interest', name:'商業數學', subs:['複利','損益兩平','毛利率','現值折現','目標利潤','交易損失']},
+  {id:'func',     name:'函數建模', subs:['線性函數','二次函數頂點','分段計費','二次極值','對數尺度']},
+  {id:'work',     name:'應用計算', subs:['工程效率','濃度混合','追趕相遇','平均速度','流水行船','植樹間隔','單位換算','比例分配','百分比變化','年齡問題']},
+];
+const CH_BY_ID=Object.fromEntries(CHAPTERS.map(c=>[c.id,c]));
+
+/* ===== UI ===== */
+/* ===== 作答紀錄(localStorage) ===== */
+const LOG_KEY='logicPractice.v1';
+let log=[], storageOK=true;
+try{
+  const raw=localStorage.getItem(LOG_KEY);
+  const arr=raw?JSON.parse(raw):[];
+  if(Array.isArray(arr)) log=arr.filter(r=>r&&typeof r.ch==='string'&&typeof r.sub==='string');
+}catch(e){storageOK=false}
+function saveLog(){
+  try{localStorage.setItem(LOG_KEY,JSON.stringify(log))}catch(e){storageOK=false}
+}
+function record(ch,sub,ok,mode){
+  log.push({ch,sub,ok:!!ok,ts:Date.now(),mode});
+  if(log.length>20000) log=log.slice(-20000);
+  saveLog();
+}
+
+function twoClick(btn,label,confirmLabel,action){
+  let armed=false, timer;
+  btn.textContent=label;
+  btn.onclick=()=>{
+    if(!armed){armed=true;btn.textContent=confirmLabel;timer=setTimeout(()=>{armed=false;btn.textContent=label},3500)}
+    else{clearTimeout(timer);armed=false;btn.textContent=label;action()}
+  };
+}
+const $=id=>document.getElementById(id);
+
+/* 題目繪製(練習與考卷共用) */
+function drawQuestion(g,diagramEl,qEl,optsEl,onPick){
+  diagramEl.innerHTML=g.diagram||'';
+  qEl.textContent=g.q;
+  optsEl.innerHTML='';
+  const buttons=[];
+  g.options.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='opt';
+    btn.textContent=opt.label;
+    buttons.push({btn,opt});
+    btn.onclick=()=>onPick(opt,buttons);
+    optsEl.appendChild(btn);
+  });
+  return buttons;
+}
+function revealButtons(buttons,g,chosen){
+  buttons.forEach(({btn,opt})=>{
+    btn.disabled=true;
+    if(opt.value===g.answer) btn.classList.add('correct');
+    else if(opt===chosen) btn.classList.add('wrong');
+  });
+}
+
+/* 分頁 */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+    ['practice','stats','exam'].forEach(id=>{$('p-'+id).hidden = id!==t.dataset.tab});
+    if(t.dataset.tab==='stats') renderStats();
+  };
+});
+
+/* ---- 練習 ---- */
+let current='seq', right=0, total=0, practiceQ=null;
+const chipsEl=$('chips');
+CHAPTERS.forEach(c=>{
+  const b=document.createElement('button');
+  b.className='chip'+(c.id===current?' active':'');
+  b.textContent=c.name;
+  b.onclick=()=>{current=c.id; [...chipsEl.children].forEach(ch=>ch.classList.remove('active')); b.classList.add('active'); newQuestion()};
+  chipsEl.appendChild(b);
+});
+function updateScore(){$('score').textContent = total===0? '尚未作答' : `本次答對 ${right} / ${total} 題`}
+function newQuestion(){
+  const g=gens[current]();
+  practiceQ=g;
+  $('explain').hidden=true;
+  $('next').hidden=true;
+  drawQuestion(g,$('diagram'),$('q'),$('opts'),(opt,buttons)=>{
+    total++;
+    const ok=opt.value===g.answer;
+    if(ok) right++;
+    revealButtons(buttons,g,opt);
+    record(current,g.sub,ok,'practice');
+    updateScore();
+    $('explain').hidden=false;
+    $('explain').textContent=g.explain;
+    $('next').hidden=false;
+  });
+}
+$('next').onclick=newQuestion;
+
+/* ---- 統計 / 弱項 ---- */
+const MIN_N=3, WEAK_RATE=0.8, WEAK_MAX=3;
+function pct(c,n){return n? Math.round(c/n*100) : 0}
+function renderStats(){
+  const body=$('statsBody');
+  if(log.length===0){
+    body.innerHTML=`<div class="card">還沒有作答紀錄。到「練習」或「考卷」做幾題,這裡就會出現各子題型的答對率。</div>`
+      +(storageOK?'':`<div class="note">注意:這個瀏覽器無法使用本機儲存,紀錄只會保留到關閉頁面為止。</div>`);
+    return;
+  }
+  const bySub={}, byCh={};
+  let pn=0,en=0,allC=0;
+  for(const r of log){
+    const k=r.ch+'|'+r.sub;
+    const s=bySub[k]||(bySub[k]={n:0,c:0}); s.n++; if(r.ok)s.c++;
+    const c=byCh[r.ch]||(byCh[r.ch]={n:0,c:0}); c.n++; if(r.ok)c.c++;
+    if(r.ok)allC++;
+    if(r.mode==='exam')en++; else pn++;
+  }
+  // 弱項:樣本數 >= MIN_N、答對率低於門檻,取最低的幾項
+  const cand=[];
+  for(const ch of CHAPTERS)for(const sub of ch.subs){
+    const s=bySub[ch.id+'|'+sub];
+    if(s&&s.n>=MIN_N&&s.c/s.n<WEAK_RATE) cand.push({ch,sub,n:s.n,c:s.c,rate:s.c/s.n});
+  }
+  cand.sort((a,b)=>a.rate-b.rate||b.n-a.n);
+  const weak=cand.slice(0,WEAK_MAX);
+  const weakKeys=new Set(weak.map(w=>w.ch.id+'|'+w.sub));
+
+  let html=`<div class="sum">共作答 <b>${log.length}</b> 題,整體答對率 <b>${pct(allC,log.length)}%</b>(練習 ${pn} 題、考卷 ${en} 題)</div>`;
+  if(weak.length){
+    html+=`<div class="weakbox"><b>弱項提醒</b><br>`+weak.map(w=>`${w.ch.name} › ${w.sub}:答對率 ${pct(w.c,w.n)}%(${w.c}/${w.n})`).join('<br>')+`</div>`;
+  } else {
+    html+=`<div class="okbox">目前沒有答對率低於 ${WEAK_RATE*100}% 的子題型(至少作答 ${MIN_N} 題才列入判斷)。</div>`;
+  }
+  for(const ch of CHAPTERS){
+    const c=byCh[ch.id]||{n:0,c:0};
+    html+=`<div class="chblk"><div class="chhead"><span>${ch.name}</span><span>${c.n?pct(c.c,c.n)+'%('+c.c+'/'+c.n+')':'尚無資料'}</span></div><div class="bar"><i style="width:${pct(c.c,c.n)}%"></i></div>`;
+    for(const sub of ch.subs){
+      const s=bySub[ch.id+'|'+sub];
+      if(!s){
+        html+=`<div class="row none"><span class="nm">${sub}</span><span></span><span class="pct">—</span><span class="cnt">0</span></div>`;
+        continue;
+      }
+      const isWeak=weakKeys.has(ch.id+'|'+sub);
+      const p=pct(s.c,s.n);
+      const lowSample=s.n<MIN_N;
+      html+=`<div class="row${isWeak?' weak':''}"><span class="nm">${sub}${isWeak?'<span class="flag">弱項</span>':''}</span><div class="bar${isWeak?' weak':''}"><i style="width:${p}%"></i></div><span class="pct">${p}%</span><span class="cnt" title="${lowSample?'樣本不足':''}">${s.c}/${s.n}${lowSample?'*':''}</span></div>`;
+    }
+    html+=`</div>`;
+  }
+  html+=`<div class="note">* 作答不到 ${MIN_N} 題的子題型樣本太少,不列入弱項判斷。統計合併練習與考卷的所有紀錄。</div>`;
+  if(!storageOK) html+=`<div class="note">注意:這個瀏覽器無法使用本機儲存,紀錄只會保留到關閉頁面為止。</div>`;
+  body.innerHTML=html;
+}
+twoClick($('clearBtn'),'清除所有紀錄','再按一次確定清除',()=>{log=[];saveLog();renderStats()});
+
+/* ---- 考卷 ---- */
+const scopeSel=$('exScope');
+scopeSel.innerHTML=`<option value="all">混合所有章節</option>`+CHAPTERS.map(c=>`<option value="${c.id}">只考:${c.name}</option>`).join('');
+let exam=null;
+function labelOf(g,value){const o=g.options.find(o=>o.value===value);return o?o.label:String(value)}
+function startExam(cfg){
+  const qs=[];
+  for(let i=0;i<cfg.n;i++){
+    const ch=cfg.scope==='all'? pick(CHAPTERS).id : cfg.scope;
+    let g, tries=0;
+    do{ g=gens[ch](); tries++ }while(tries<6 && qs.some(x=>x.g.q===g.q));
+    qs.push({ch,g,chosen:null,ok:null});
+  }
+  exam={cfg,qs,idx:0,right:0};
+  $('examSetup').hidden=true; $('examResult').hidden=true; $('examRun').hidden=false;
+  renderExamQ();
+}
+function renderExamQ(){
+  const item=exam.qs[exam.idx], g=item.g, n=exam.qs.length;
+  $('exProg').textContent=`第 ${exam.idx+1} / ${n} 題`;
+  $('exTag').textContent=exam.cfg.scope==='all'? CH_BY_ID[item.ch].name : '';
+  $('exExplain').hidden=true;
+  $('exNext').hidden=true;
+  $('exNext').textContent = exam.idx<n-1 ? '下一題' : '查看成績';
+  drawQuestion(g,$('exDiagram'),$('exQ'),$('exOpts'),(opt,buttons)=>{
+    const ok=opt.value===g.answer;
+    item.chosen=opt; item.ok=ok; if(ok) exam.right++;
+    record(item.ch,g.sub,ok,'exam');
+    if(exam.cfg.reveal==='now'){
+      revealButtons(buttons,g,opt);
+      $('exExplain').hidden=false;
+      $('exExplain').textContent=g.explain;
+    } else {
+      buttons.forEach(({btn,opt:o})=>{btn.disabled=true; if(o===opt) btn.classList.add('picked')});
+    }
+    $('exNext').hidden=false;
+  });
+}
+$('exNext').onclick=()=>{
+  if(exam.idx<exam.qs.length-1){exam.idx++;renderExamQ()} else finishExam();
+};
+twoClick($('exQuit'),'放棄考卷','再按一次確定放棄',()=>{
+  exam=null; $('examRun').hidden=true; $('examResult').hidden=true; $('examSetup').hidden=false;
+});
+function finishExam(){
+  const n=exam.qs.length, r=exam.right;
+  $('examRun').hidden=true;
+  const res=$('examResult');
+  const wrong=exam.qs.map((it,i)=>({it,i})).filter(x=>!x.it.ok);
+  let html=`<div class="card"><div class="score">考卷完成</div><div class="big">${r} / ${n}(${pct(r,n)}%)</div>`;
+  html+= wrong.length? `<div>答錯 ${wrong.length} 題,詳情如下。這份考卷的作答已計入統計。</div>` : `<div>全部答對!這份考卷的作答已計入統計。</div>`;
+  html+=`<div class="btn-row"><button class="btn" id="exAgain">再考一次(同設定)</button><button class="btn ghost" id="exBack">回設定</button><button class="btn ghost" id="exToStats">看統計</button></div></div>`;
+  if(wrong.length){
+    html+=`<div class="card"><div class="score">錯題列表</div>`;
+    wrong.forEach(({it,i})=>{
+      const g=it.g;
+      html+=`<div class="wrongitem"><div class="tag">第 ${i+1} 題・${CH_BY_ID[it.ch].name} › ${g.sub}</div>${g.diagram||''}<div class="q" style="margin-bottom:.4rem"></div><div class="ans">你的答案:<span style="color:var(--bad)"></span><br>正確答案:<span style="color:var(--good)"></span></div><div class="explain" style="margin-top:.6rem"></div></div>`;
+    });
+    html+=`</div>`;
+  }
+  res.innerHTML=html;
+  // 以 textContent 填入文字,避免題目內的符號被當成 HTML
+  const items=res.querySelectorAll('.wrongitem');
+  wrong.forEach(({it},k)=>{
+    const g=it.g, el=items[k];
+    el.querySelector('.q').textContent=g.q;
+    const spans=el.querySelectorAll('.ans span');
+    spans[0].textContent=it.chosen? it.chosen.label : '(未作答)';
+    spans[1].textContent=labelOf(g,g.answer);
+    el.querySelector('.explain').textContent=g.explain;
+  });
+  res.hidden=false;
+  $('exAgain').onclick=()=>startExam(exam.cfg);
+  $('exBack').onclick=()=>{exam=null;res.hidden=true;$('examSetup').hidden=false};
+  $('exToStats').onclick=()=>document.querySelector('.tab[data-tab="stats"]').click();
+}
+$('exStart').onclick=()=>{
+  let n=parseInt($('exN').value,10);
+  if(!Number.isFinite(n)) n=10;
+  n=Math.max(1,Math.min(50,n));
+  $('exN').value=n;
+  startExam({n,scope:scopeSel.value,reveal:document.querySelector('input[name=exReveal]:checked').value});
+};
+
+updateScore();
+newQuestion();
+</script>
+</body>
+</html>
