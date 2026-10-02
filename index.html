@@ -554,6 +554,958 @@ function vbOdd(){
   return {sub:'分類異質項', q, answer:it.odd, options:fixedOptions([it.odd,...it.same]), explain};
 }
 
+/* ===== 2-A 時間線速率整合 ===== */
+const lcm=(a,b)=>a/gcd(a,b)*b;
+const r1=x=>Math.round(x*10)/10;
+function wkDelay(){
+  const v=pick([36,54,72,90,108,126]);
+  const names=['處理','傳輸','執行'];
+  const ds=shuffle([0.1,0.2,0.3,0.4,0.5,0.6]).slice(0,ri(2,3));
+  const tot=r2(ds.reduce((a,b)=>a+b,0));
+  const ms=r2(v*5/18);
+  const answer=r2(v*5/18*tot);
+  const pool=[r2(v*tot), r2(v*5/18*ds[0]), r2(v*18/5*tot)].filter(x=>x!==answer);
+  const lines=ds.map((d,i)=>`${i===0?'先':'再'}經過 ${d} 秒的${names[i]}延遲`).join(',');
+  const q=`某車以時速 ${v} 公里行駛。系統從送出指令到動作完成,${lines}。請問在這段延遲期間,車子大約又前進了幾公尺(四捨五入至小數點後兩位)?`;
+  const explain=`時速要先換成公尺/秒:${v} 公里/小時 = ${v}×5/18 ≈ ${ms} 公尺/秒;延遲要全部相加:${ds.join(' + ')} = ${tot} 秒;距離 = 速度 × 時間 ≈ ${answer} 公尺。不能直接用 ${v}×${tot}(公里/小時和秒不能直接相乘)。`;
+  return {sub:'訊號延遲', q, answer, options:uniqOptions(answer,()=>r2(answer*(1+ri(-30,30)/100)),undefined,pool), explain, meta:{v,ds}};
+}
+function wkVideo(){
+  const sp=pick([0.5,0.8,1.25,1.5,2]);
+  const unit={0.5:1,0.8:4,1.25:5,1.5:3,2:2}[sp];
+  const len=unit*ri(Math.ceil(300/unit),Math.floor(2400/unit));
+  const answer=Math.round(len/sp);
+  const mmss=x=>`${Math.floor(x/60)} 分 ${x%60} 秒`;
+  const pool=[Math.round(len*sp),len].filter(x=>x>0&&x!==answer);
+  const q=`一部影片原本長 ${mmss(len)}。若用 ${sp} 倍速播放,實際需要播放多久?`;
+  const explain=`播放時間 = 原片長 ÷ 倍速。先換成秒:${mmss(len)} = ${len} 秒;${len} ÷ ${sp} = ${answer} 秒 = ${mmss(answer)}。${sp<1?'倍速小於 1 表示比原速慢,所以時間一定比原片長更久。':'倍速大於 1 表示比原速快,所以時間一定比原片長更短。'}`;
+  return {sub:'影片倍速', q, answer, options:uniqOptions(answer,()=>Math.max(30,answer+ri(-12,12)*5),mmss,pool), explain, meta:{len,sp}};
+}
+function wkElevator(){
+  const a=ri(1,6), b=a+ri(5,15), t=pick([2,3,4]);
+  const door=Math.random()<0.5? pick([10,12,15]) : 0;
+  const seg=b-a, answer=seg*t+door;
+  const pool=[(seg+1)*t+door, b*t+door, seg*t, (seg-1)*t+door].filter(x=>x>0&&x!==answer);
+  const q=door
+    ? `電梯從 ${a} 樓出發往上到 ${b} 樓,每經過一個樓層間隔需要 ${t} 秒。抵達 ${b} 樓後,門打開還需要 ${door} 秒。請問從出發到門完全打開,共需幾秒?`
+    : `電梯從 ${a} 樓出發往上到 ${b} 樓,每經過一個樓層間隔需要 ${t} 秒(不計開關門時間)。請問共需幾秒?`;
+  const explain=`從 ${a} 樓到 ${b} 樓不是 ${b-a+1} 段,而是樓層差 ${b}−${a} = ${seg} 個樓層間隔。移動時間 = ${seg}×${t} = ${seg*t} 秒${door?`;再加開門 ${door} 秒,共 ${answer} 秒`:''}。`;
+  return {sub:'電梯樓層', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-4,4)*t),undefined,pool), explain, meta:{a,b,t,door}};
+}
+const ZONES=[['台北',8],['東京',9],['曼谷',7],['倫敦',0],['巴黎',1],['洛杉磯',-8],['紐約',-5],['雪梨',10]];
+function wkZone(){
+  let A,B; do{A=pick(ZONES);B=pick(ZONES)}while(A===B||Math.abs(A[1]-B[1])<2);
+  const dh=ri(0,23), dm=pick([0,15,30,45]), fh=ri(2,14), fm=pick([0,10,20,30,40,50]);
+  const dep=dh*60+dm, fl=fh*60+fm, diff=(B[1]-A[1])*60, arr=dep+fl+diff;
+  const DN={'-2':'前天','-1':'前一天','0':'當天','1':'隔天','2':'兩天後'};
+  const lab=t=>{const d=Math.floor(t/1440), m=((t%1440)+1440)%1440;
+    return `${DN[String(d)]||d+'天後'} ${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+  const hm=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;
+  const sg=n=>n>=0?`+${n}`:`−${Math.abs(n)}`;
+  const answer=lab(arr);
+  const pool=[lab(dep+fl), lab(dep+fl-diff), lab(dep+diff), `當天 ${lab(arr).split(' ')[1]}`].filter(x=>x!==answer);
+  const q=`飛機從${A[0]}(UTC${sg(A[1])})於當地時間 ${hm(dep)} 起飛,飛行時間 ${fh} 小時${fm?` ${fm} 分`:''},目的地是${B[0]}(UTC${sg(B[1])})。(忽略日光節約時間,日期以起飛當天為基準)請問抵達時,${B[0]}的當地時間是?`;
+  const explain=`抵達當地時間 = 出發時間 + 飛行時間 + (目的地 UTC − 出發地 UTC)。${hm(dep)} + ${fh} 小時${fm?` ${fm} 分`:''} + (${B[1]}−(${A[1]})) = ${B[1]-A[1]} 小時;三者相加後換回 24 小時制:超過 24:00 要減 24 並把日期 +1,小於 0 要加 24 並把日期 −1,所以是「${answer}」。`;
+  return {sub:'跨日時區', q, answer, options:strOptions(answer,pool,()=>lab(arr+ri(-8,8)*30)), explain, meta:{dep,fl,diff}};
+}
+function wkSameDist(){
+  const pairs=[[4,6],[5,10],[6,9],[6,12],[10,15],[12,18],[15,20],[20,30],[5,6],[8,12]];
+  let v1,v2,d,tries=0;
+  do{ [v1,v2]=pick(pairs); d=ri(1,9)*10; tries++ }
+  while(!(Number.isInteger(d*60/v1)&&Number.isInteger(d*60/v2)&&d*60/v1!==d*60/v2)&&tries<500);
+  const t1=d*60/v1, t2=d*60/v2, answer=t1-t2;
+  const pool=[Math.round(d*60/(v2-v1)), (v2-v1)*60, Math.round(d/(v2-v1))].filter(x=>x>0&&x!==answer);
+  const q=`甲、乙兩輛車從同一地點出發,前往 ${d} 公里外的同一個目的地。甲的時速 ${v1} 公里,乙的時速 ${v2} 公里。請問乙比甲早到幾分鐘?`;
+  const explain=`同樣的距離要各自算時間:甲 = ${d}÷${v1} 小時 = ${t1} 分鐘;乙 = ${d}÷${v2} 小時 = ${t2} 分鐘。差 = ${t1}−${t2} = ${answer} 分鐘。不能直接拿速度差去除距離。`;
+  return {sub:'同距離不同速', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-6,6)*5),undefined,pool), explain, meta:{d,v1,v2}};
+}
+const WK_NEW=[wkDelay,wkVideo,wkElevator,wkZone,wkSameDist];
+
+/* ===== 8-4 趨勢外推 / 迴歸 ===== */
+function stInterp(){
+  const C=[
+    {d:'某老師收集了 10~20 歲學生的年齡與身高資料,畫出趨勢線',lbl:'年齡 ',lo:10,hi:20,u:' 歲'},
+    {d:'某店記錄了開業第 1~5 年的年營收,畫出趨勢線',lbl:'開業第 ',lo:1,hi:5,u:' 年'},
+    {d:'某實驗在 20~40°C 之間測量了反應速率,畫出趨勢線',lbl:'溫度 ',lo:20,hi:40,u:'°C'},
+    {d:'某班記錄了第 1~8 週的每週複習時數與成績,畫出趨勢線',lbl:'第 ',lo:1,hi:8,u:' 週'},
+  ];
+  const c=pick(C), inside=Math.random()<0.5;
+  const x=inside? ri(c.lo+1,c.hi-1) : c.hi+ri(Math.max(3,Math.round((c.hi-c.lo)*0.5)),Math.round((c.hi-c.lo))+10);
+  const OPT=['內插(在已觀察範圍內),通常較可靠','內插(在已觀察範圍內),不確定性較大','外推(超出已觀察範圍),通常較可靠','外推(超出已觀察範圍),不確定性較大'];
+  const answer=inside?OPT[0]:OPT[3];
+  const q=`${c.d}。現在要用這條趨勢線預測「${c.lbl}${x}${c.u}」的數值。這個預測屬於哪一種,可靠度如何?`;
+  const explain=inside
+    ? `已觀察的範圍是 ${c.lo}~${c.hi},${x} 落在範圍內,屬於內插,通常較可靠。(內插較穩,外推越遠越危險。)`
+    : `已觀察的範圍只到 ${c.hi},${x} 超出了這個範圍,屬於外推。外推越遠,關係越可能轉折,不確定性越大。`;
+  return {sub:'內插外推', q, answer, options:fixedOptions(OPT), explain};
+}
+function stRegress(){
+  const a=ri(20,60), b=pick([2,3,4,5,6,-2,-3]);
+  const eq=`ŷ = ${a} ${b>=0?'+':'−'} ${Math.abs(b)}x`;
+  if(Math.random()<0.5){
+    const x0=ri(2,12), answer=a+b*x0;
+    const pool=[b*x0, a+b, a*x0+b].filter(x=>x!==answer);
+    const q=`某迴歸線為 ${eq}。請問當 x = ${x0} 時,預測值 ŷ 是多少?`;
+    const explain=`把 x = ${x0} 代入:ŷ = ${a} ${b>=0?'+':'−'} ${Math.abs(b)}×${x0} = ${answer}。`;
+    return {sub:'迴歸預測', q, answer, options:uniqOptions(answer,()=>answer+ri(-10,10),undefined,pool), explain, meta:{kind:0,a,b,x0}};
+  }
+  const k=ri(2,6), answer=b*k;
+  const pool=[b, k, a+b*k, -b*k].filter(x=>x!==answer);
+  const q=`某迴歸線為 ${eq}。當 x 增加 ${k} 單位時,預測值 ŷ 平均會改變多少?(增加為正、減少為負)`;
+  const explain=`斜率 b = ${b} 的意思是:x 每增加 1 單位,預測 y 平均改變 ${b} 單位。所以 x 增加 ${k} 單位,ŷ 改變 ${b}×${k} = ${answer}。迴歸線只用來描述與預測,不會自動證明 x 導致 y。`;
+  return {sub:'迴歸預測', q, answer, options:uniqOptions(answer,()=>answer+ri(-8,8),undefined,pool), explain, meta:{kind:1,a,b,k}};
+}
+function stResidual(){
+  const a=ri(20,60), b=pick([2,3,4,5,-2,-3]), x0=ri(2,10);
+  let e; do{e=ri(-8,8)}while(e===0);
+  const pred=a+b*x0, y=pred+e;
+  const pool=[-e, y, pred].filter(x=>x!==e);
+  const q=`某迴歸線為 ŷ = ${a} ${b>=0?'+':'−'} ${Math.abs(b)}x。有一筆實際資料 (x, y) = (${x0}, ${y})。若定義「殘差 = 實際值 − 預測值」,這筆資料的殘差是多少?`;
+  const explain=`先算預測值:ŷ = ${a} ${b>=0?'+':'−'} ${Math.abs(b)}×${x0} = ${pred};殘差 = ${y} − ${pred} = ${e}。殘差就是資料點到迴歸線的垂直差,正值代表實際點在線的上方。`;
+  return {sub:'殘差', q, answer:e, options:uniqOptions(e,()=>e+ri(-6,6),undefined,pool), explain, meta:{a,b,x0,y}};
+}
+function stTrendWord(){
+  const bank=[
+    {s:'某縣市連續 5 年人口逐年增加。',ok:'若現有趨勢持續,未來幾年人口可能還會增加,但預測越遠越不確定。',bad:['20 年後人口一定會比現在多 50%。','人口增加證明這個縣市的政策一定成功。','人口永遠不會減少。']},
+    {s:'某店過去 6 個月的營收逐月上升。',ok:'營收目前有上升的趨勢,短期內可能繼續上升,但不能保證。',bad:['明年營收必然翻倍。','營收上升證明最近的廣告一定有效。','營收以後每個月都一定會上升。']},
+    {s:'某班第 1~5 次小考的平均分數逐次進步。',ok:'成績有進步的趨勢,下一次考試可能也會進步,但不能保證。',bad:['第 20 次小考一定會拿到滿分。','進步一定是因為補習造成的。','成績不可能再下降。']},
+    {s:'某城市過去 10 年的年平均氣溫呈上升趨勢。',ok:'資料顯示近 10 年有上升趨勢,若條件不變,未來可能仍會上升,但越遠的預測越不確定。',bad:['100 年後氣溫必然是現在的 2 倍。','年平均氣溫以後每一年都一定比前一年高。','這證明氣溫上升只有單一原因。']},
+    {s:'某 App 前 4 週的下載量每週都增加。',ok:'下載量目前呈上升趨勢,短期內可能繼續增加,但不能因此斷言會一直成長。',bad:['第 52 週的下載量一定是現在的 13 倍。','下載量增加證明 App 沒有任何問題。','下載量以後絕對不會下降。']},
+  ];
+  const it=pick(bank);
+  const q=`${it.s}下列哪一個結論最合理?`;
+  const explain=`有趨勢可以預測,但預測必須保留不確定性:趨勢支持「可能」,不支持「必然」。看到「一定、必然、永遠」這類強度很高的說法,通常需要更強的證據,所以最合理的是「${it.ok}」`;
+  return {sub:'結論強度', q, answer:it.ok, options:fixedOptions([it.ok,...it.bad]), explain};
+}
+
+/* ===== 8-5 母體、樣本與抽樣推論 ===== */
+function stSE(){
+  const k=pick([2,3,4]), n1=pick([25,100]), n2=n1*k*k;
+  const L=[`約為原來的 1/${k}`,`約為原來的 1/${k*k}`,`約為原來的 ${k} 倍`,`大致不變`];
+  const q=`某調查的樣本數由 ${n1} 人增加為 ${n2} 人(抽樣方法相同、都是隨機抽樣)。請問標準誤大約會怎麼變?`;
+  const explain=`標準誤與 √n 成反比。樣本數變成 ${k*k} 倍,√n 變成 ${k} 倍,所以標準誤約變成原來的 1/${k},區間也跟著變窄。(但增加樣本數只能降低隨機誤差,不能消除抽樣偏誤。)`;
+  return {sub:'標準誤與樣本數', q, answer:L[0], options:fixedOptions(L), explain};
+}
+function stCI(){
+  const p=pick([0.3,0.4,0.5,0.6,0.7]), n=pick([100,400,900,1600]);
+  const se=Math.sqrt(p*(1-p)/n), answer=r1(1.96*se*100);
+  const pool=[r1(se*100), r1(2*1.96*se*100), r1(1.96*p*(1-p)/n*100)].filter(x=>x>0&&x!==answer);
+  const q=`某調查隨機抽取 ${n} 人,其中 ${Math.round(p*100)}% 表示支持。若以「95% 信賴區間 ≈ 估計值 ± 1.96 × 標準誤」估算,其中標準誤 = √[p(1−p)/n],誤差範圍約為正負幾個百分點?(四捨五入至小數點後一位)`;
+  const explain=`標準誤 = √[${p}×${r2(1-p)}/${n}] ≈ ${r2(se*100)/100 || se.toFixed(4)};乘上 1.96 後約 ${answer} 個百分點,所以 95% 信賴區間約為 ${Math.round(p*100)}% ± ${answer}%。樣本數越大,區間越窄。`;
+  return {sub:'信賴區間', q, answer, options:uniqOptions(answer,()=>r1(answer+ri(-4,4)*0.5+0.3),x=>`± ${x} 個百分點`,pool), explain, meta:{p,n}};
+}
+function stTest(){
+  const al=pick([0.05,0.01,0.1]);
+  let p; do{p=pick([0.001,0.003,0.008,0.02,0.03,0.04,0.06,0.08,0.12,0.2,0.35])}while(p===al);
+  const OPT=['拒絕 H0(證據足夠)','不拒絕 H0(證據不足,但不是證明 H0 為真)','接受 H0(證明 H0 為真)','證明 H1 一定成立'];
+  const answer=p<al?OPT[0]:OPT[1];
+  const q=`某假設檢定的顯著水準 α = ${al},算出的 p 值 = ${p}。請問應如何決策與解讀?`;
+  const explain=p<al
+    ? `p = ${p} < α = ${al},證據足夠,拒絕 H0。(但這不是「證明」H1 一定成立,也不等於實務上很重要。)`
+    : `p = ${p} ≥ α = ${al},證據不足,只能「不拒絕 H0」。不要寫成「接受 H0」,也不要把 p 值當成「H0 為真的機率」。`;
+  return {sub:'假設檢定', q, answer, options:fixedOptions(OPT), explain, meta:{al,p}};
+}
+function stErrBias(){
+  const err=[
+    '從同一份學生名冊用亂數隨機抽 100 人,再另外隨機抽 100 人,兩次估計的平均身高相差一點點。',
+    '隨機抽取 200 位選民調查(抽取方式公平),支持率與全體選民的實際支持率相差約 2 個百分點。',
+    '用公平的隨機抽樣,每次抽 50 人估計班級平均分數,每次的結果都略有不同。',
+  ];
+  const bias=[
+    '網站開放網友自願填答,收到 10 萬份問卷,結果卻與全體民意差距很大。',
+    '只在市中心商圈發問卷,即使收了 5000 份,仍系統性漏掉郊區居民。',
+    '電視節目請觀眾打電話表決,上百萬通電話的結果仍與實際民意不同。',
+  ];
+  const isErr=Math.random()<0.5, s=pick(isErr?err:bias);
+  const OPT=['抽樣誤差(隨機波動),增加樣本數通常能改善','抽樣誤差(隨機波動),增加樣本數也無法改善','抽樣偏誤(方法系統性歪掉),增加樣本數通常能改善','抽樣偏誤(方法系統性歪掉),增加樣本數也無法改善'];
+  const answer=isErr?OPT[0]:OPT[3];
+  const q=`${s}\n這個差距主要是哪一種問題?增加樣本數能改善嗎?`;
+  const explain=isErr
+    ? `抽得公平、只是運氣造成的隨機波動,叫抽樣誤差;樣本變大,誤差通常會縮小。(誤差是運氣,偏誤是方法歪掉。)`
+    : `這是抽樣方法本身系統性地歪掉(自選或漏掉某些人),叫抽樣偏誤;樣本再大也未必改善。先問「抽得好不好」,再問「抽得夠不夠多」。`;
+  return {sub:'誤差與偏誤', q, answer, options:fixedOptions(OPT), explain};
+}
+function stCond(){
+  if(Math.random()<0.5){
+    let pb,cond;
+    do{ pb=pick([0.2,0.4,0.5,0.8]); cond=pick([0.25,0.5,0.75,0.6,0.3]) }
+    while(Math.abs(pb*cond*100-Math.round(pb*cond*100))>1e-9);   // P(A∩B) 必須剛好是兩位小數,條件機率才會精確
+    const pab=r2(pb*cond), answer=r2(cond);
+    const pool=[r2(pab*pb), r2(1-cond), pab, r2(pab/ (pb+0.1))].filter(x=>x!==answer&&x>0&&x<=1);
+    const q=`已知 P(A∩B) = ${pab},P(B) = ${pb}。請問條件機率 P(A|B) 是多少?`;
+    const explain=`條件機率是在 B 已發生下,重新縮小樣本空間:P(A|B) = P(A∩B) ÷ P(B) = ${pab} ÷ ${pb} = ${answer}。`;
+    return {sub:'條件機率', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-3,3)*0.05),undefined,pool), explain, meta:{kind:0,pab,pb}};
+  }
+  const pa=pick([0.2,0.4,0.5,0.6]), pb=pick([0.2,0.4,0.5,0.6]);   // 兩者相乘剛好是兩位小數
+  const indep=Math.random()<0.5;
+  let pab=r2(pa*pb);
+  if(!indep){ const d=pick([0.05,-0.05,0.04,-0.04,0.03,-0.03]); pab=r2(pab+d); if(pab<=0||pab>Math.min(pa,pb)) pab=r2(pa*pb+0.05) }
+  const real=Math.round(pab*100)===Math.round(pa*pb*100);
+  const OPT=['獨立','不獨立'];
+  const q=`已知 P(A) = ${pa},P(B) = ${pb},P(A∩B) = ${pab}。請問事件 A 與 B 是否獨立?`;
+  const explain=`獨立的條件是 P(A∩B) = P(A)×P(B)。這裡 P(A)×P(B) = ${pa}×${pb} = ${r2(pa*pb)},而 P(A∩B) = ${pab},${real?'兩者相等,所以獨立':'兩者不相等,所以不獨立'}。`;
+  return {sub:'條件機率', q, answer:real?OPT[0]:OPT[1], options:fixedOptions(OPT), explain, meta:{kind:1,pa,pb,pab}};
+}
+
+/* ===== 8-B 四種抽樣法 ===== */
+const SAMPLING=['簡單隨機抽樣','系統抽樣','分層抽樣','叢集抽樣'];
+function stSampleId(){
+  const m=ri(0,3), N=ri(4,9)*100, n=ri(5,10)*10, k=pick([5,10,20,25]), M=ri(50,300), c=ri(3,8);
+  const T=[
+    [
+      `某校有 ${N} 位學生,將全部學生編號後,用電腦亂數直接抽出 ${n} 位進行問卷調查。`,
+      `把 ${N} 張抽獎券全部放入箱中攪拌後,直接隨機抽出 ${n} 張當樣本。`,
+      `從全公司 ${N} 位員工的名冊中以抽籤方式直接抽出 ${n} 人,每個人被抽到的機會都相同。`],
+    [
+      `診所掛號名冊共有 ${N} 人,先在前 ${k} 人中隨機選一個起點,之後每隔 ${k} 人抽 1 人。`,
+      `工廠生產線每生產 ${k} 件產品,就抽驗其中 1 件。`,
+      `圖書館借閱紀錄依日期排好,隨機決定起點後,每隔 ${k} 筆抽 1 筆來分析。`],
+    [
+      `某校有高一、高二、高三三個年級,依各年級人數比例,從每個年級分別隨機抽出一部分學生。`,
+      `調查先把居民依年齡層分成青年、中年、老年三組,再從每一組中各自隨機抽取固定比例的人。`,
+      `公司把員工依部門分組,每個部門都按人數比例抽出若干人調查。`],
+    [
+      `全國共有 ${M} 個班級,隨機抽出 ${c} 個班級,對被抽中班級的所有學生全部施測。`,
+      `某市有 ${M} 個里,隨機抽出 ${c} 個里,被抽中的里內所有住戶都要訪問。`,
+      `某連鎖餐廳隨機挑出 ${c} 家分店,對這幾家店當天的所有顧客發問卷。`],
+  ];
+  const s=pick(T[m]);
+  const hint=['全體直接抽籤,每個人機會相同 → 簡單隨機。','每隔固定間距抽一個 → 系統抽樣。','先分層、每一層都要抽 → 分層抽樣。','先分群、抽到哪群就整群全查 → 叢集抽樣。'][m];
+  const q=`${s}\n請問這是哪一種抽樣方法?`;
+  const explain=`判斷方法要看抽樣結構,不要只看有沒有「隨機」兩字(四種方法都可以含隨機步驟)。本題:${hint}`;
+  return {sub:'抽樣法辨識', q, answer:SAMPLING[m], options:fixedOptions(SAMPLING), explain};
+}
+function stSystemic(){
+  const k=pick([5,10,20,25]), n=ri(4,10), N=k*n, r=ri(1,k), j=ri(3,n);
+  const answer=r+(j-1)*k;
+  const pool=[r+j*k, j*k, r+(j-2)*k, (j-1)*k].filter(x=>x>0&&x!==answer);
+  const q=`名冊共有 ${N} 人(編號 1~${N}),要用系統抽樣抽出 ${n} 人:先算出固定間距,再從隨機起點開始等距抽取。若隨機起點是第 ${r} 號,請問第 ${j} 個被抽到的是幾號?`;
+  const explain=`間距 = ${N} ÷ ${n} = ${k}。起點是 ${r} 號,第 ${j} 個 = ${r} + (${j}−1)×${k} = ${answer} 號。`;
+  return {sub:'系統抽樣', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-3,3)*k+ri(-2,2)),undefined,pool), explain, meta:{k,n,r,j}};
+}
+function stStratum(){
+  const names=pick([['高一','高二','高三'],['北區','中區','南區'],['青年','中年','老年']]);
+  const rt=[ri(1,5),ri(1,5),ri(1,5)], m=ri(1,4)*20, t=ri(2,6), sum=rt[0]+rt[1]+rt[2];
+  const sizes=rt.map(x=>x*m), N=sum*m, n=sum*t, i=ri(0,2), answer=rt[i]*t;
+  const pool=[Math.round(n/3), Math.round(sizes[i]/10), n-answer, rt[i]].filter(x=>x>0&&x!==answer);
+  const q=`某調查母體共 ${N} 人,${names[0]} ${sizes[0]} 人、${names[1]} ${sizes[1]} 人、${names[2]} ${sizes[2]} 人。若用分層抽樣、按各層人數比例抽出 ${n} 人,請問${names[i]}應抽幾人?`;
+  const explain=`按比例分層:每層抽的人數 = 樣本數 × (該層人數 ÷ 母體總數)。${names[i]}:${n} × ${sizes[i]} ÷ ${N} = ${answer} 人。(分層的目的:確保每一層都有代表。)`;
+  return {sub:'分層抽樣', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-4,4)),undefined,pool), explain, meta:{sizes,N,n,i}};
+}
+function stPurpose(){
+  const bank=[
+    {s:'目的是確保母體中的每一個子群體(例如各年級)都在樣本裡有代表。',a:'分層抽樣'},
+    {s:'目的是降低調查成本,只要走訪幾個群體(例如幾個班級),就把群內的人全部調查。',a:'叢集抽樣'},
+    {s:'做法簡單,先決定一個固定的間距,再從隨機起點每隔固定間距抽一個。',a:'系統抽樣'},
+    {s:'全體直接抽籤,每個人被抽到的機會都完全相同。',a:'簡單隨機抽樣'},
+  ];
+  const it=pick(bank);
+  const q=`下列敘述最符合哪一種抽樣方法?\n${it.s}`;
+  const explain=`分層是每層都抽(確保各層代表);叢集是抽到哪群就整群全查(降低成本);系統是每隔固定間距;簡單隨機是全體直接抽籤。`;
+  return {sub:'抽樣目的', q, answer:it.a, options:fixedOptions(SAMPLING), explain};
+}
+
+/* ===== 8-C 偏誤與代表性 ===== */
+const BIASES=['涵蓋偏誤(抽樣框漏掉某些人)','自願回覆偏誤(意見強的人更會填)','無回覆偏誤(沒回覆的人可能不同)','測量偏誤(題目措辭或工具歪掉)'];
+function stBiasType(){
+  const bank=[
+    [0,'在圖書館裡發問卷,想了解全民的閱讀習慣。'],
+    [0,'只用市話電話簿抽樣,調查全市居民的網路購物習慣。'],
+    [0,'只在高鐵站發問卷,想知道全縣居民的通勤方式。'],
+    [1,'某網站開放網友自願投票,並用結果代表全民的意見。'],
+    [1,'電視節目請觀眾打電話表決,並用結果代表全體民意。'],
+    [1,'在社群平臺貼文邀請「有興趣的人」填寫問卷,並宣稱代表全體。'],
+    [2,'問卷寄出 2000 份只回收 300 份,而且沒回覆的多半是忙碌的上班族。'],
+    [2,'郵寄問卷調查收入,但高收入者普遍不願意回答。'],
+    [2,'電話訪問時有三成的人拒絕受訪,而拒答的人大多是對議題不滿的人。'],
+    [3,'題目是:「你是否支持必要的節能政策?」'],
+    [3,'題目是:「你是否也認為這項明顯失敗的政策應該廢止?」'],
+    [3,'題目是:「面對日益嚴重的污染,您是否支持政府加強管制?」'],
+  ];
+  const [m,s]=pick(bank);
+  const q=`${s}\n這個調查最主要的問題屬於哪一種偏誤?`;
+  const explain=['抽樣框漏掉了某一類人,他們沒有機會被抽到,屬於涵蓋偏誤。','只有意見強烈、主動想表達的人才會回覆,樣本不像縮小版的母體,屬於自願回覆偏誤。','被抽中卻沒有回覆的人,可能和有回覆的人不同,屬於無回覆偏誤。','題目措辭帶有立場、誘導受訪者往某個方向回答,屬於測量偏誤。'][m];
+  return {sub:'偏誤類型', q, answer:BIASES[m], options:fixedOptions(BIASES), explain};
+}
+function stBiasMissing(){
+  const bank=[
+    {s:'在圖書館門口發問卷,想調查全民的閱讀習慣。',ok:'平常不太去圖書館、較少閱讀的人',bad:['常去圖書館的人','熱愛閱讀的人','在圖書館工作的人']},
+    {s:'只用市話電話簿隨機撥打,調查全市居民的網路購物習慣。',ok:'沒有市話、只使用手機的人',bad:['家裡有市話的人','電話簿上有登記的人','接起市話的人']},
+    {s:'只在高鐵站發問卷,想知道全縣居民的通勤方式。',ok:'平常不搭高鐵的居民',bad:['經常搭高鐵的人','高鐵站內的旅客','在高鐵站工作的人']},
+    {s:'只在平日白天的市中心商圈攔訪,想調查全市居民的消費習慣。',ok:'平日白天要上班或上課、不在商圈的人',bad:['平日白天在商圈逛街的人','商圈內的店員','常到商圈消費的人']},
+    {s:'只用網路問卷,想了解全國民眾的媒體使用習慣。',ok:'不上網或很少上網的人',bad:['重度網路使用者','在網路上很活躍的人','填寫網路問卷的人']},
+  ];
+  const it=pick(bank);
+  const q=`${it.s}\n下列哪一類人最容易被這個調查漏掉(沒有機會被抽到)?`;
+  const explain=`先問母體是誰,再問抽樣框是否完整。這個做法的抽樣框只涵蓋特定場合或管道,所以「${it.ok}」最容易被漏掉,結果可能出現涵蓋偏誤。`;
+  return {sub:'誰被漏掉', q, answer:it.ok, options:fixedOptions([it.ok,...it.bad]), explain};
+}
+function stBiasFix(){
+  const FIX=['擴充抽樣框,讓母體中的每種人都有機會被抽到','追蹤未回覆者,並報告回覆率與可能的偏誤','改用中性、不帶立場的題目措辭','改用隨機抽樣邀請受訪者,而不是只靠自願填答'];
+  const bank=[
+    [0,'抽樣名單漏掉了一部分母體成員'],
+    [0,'抽樣框只涵蓋某些管道(例如只有市話名單),有些人完全沒有被抽到的機會'],
+    [1,'許多被抽中的人沒有回覆,而且沒回覆的人可能和有回覆的人不同'],
+    [1,'回收率很低,擔心未回覆者的想法與已回覆者不同'],
+    [2,'題目措辭帶有立場,誘導受訪者往某個方向回答'],
+    [2,'問卷題目用了「明顯失敗」「必要的」這類帶評價的字眼'],
+    [3,'只有意見特別強烈的人才主動填答,樣本不像縮小版的母體'],
+    [3,'結果來自網站上自願投票,參與者是自己選擇要不要參加'],
+  ];
+  const [m,s]=pick(bank);
+  const q=`調查發現的問題是:${s}。下列哪一種做法最能直接改善這個問題?`;
+  const explain=`對症處理:漏掉某些人 → 擴充抽樣框;未回覆 → 追蹤未回覆者並報告回覆率;措辭帶立場 → 改用中性問題;只靠自願填答 → 改用隨機邀請。增加樣本數只能降低隨機誤差,不能自動消除系統偏誤。`;
+  return {sub:'偏誤修正', q, answer:FIX[m], options:fixedOptions(FIX), explain};
+}
+function stBiasSize(){
+  const bank=[
+    {s:'下列關於「樣本大小」與「偏誤」的敘述,何者正確?',ok:'增加樣本數可以降低隨機誤差,但不能自動消除系統性偏誤。',bad:['樣本數只要夠大,偏誤就會自然消失。','只要回收份數夠多,自願填答也能代表全體。','偏誤和隨機誤差其實是同一件事。']},
+    {s:'調查者說:「我們收到了 10 萬份網路自願問卷,所以結果一定很準。」下列哪一項最能指出這個說法的問題?',ok:'樣本大不代表抽得好;自願填答可能有自選偏誤。',bad:['10 萬份太少,一定要超過 100 萬份。','網路問卷的題目一定比紙本問卷多。','只要是網路問卷就一定不準確。']},
+    {s:'甲:隨機抽樣 1,000 人;乙:自願填答 10 萬人。關於代表性,哪個說法較合理?',ok:'甲通常較能代表母體,因為抽樣方法是否公平比人數多寡更重要。',bad:['乙一定較準確,因為人數多 100 倍。','兩者代表性一定相同。','人數多的調查結果一定沒有偏誤。']},
+    {s:'要讓調查結果更「準確」(接近真實情況),下列哪個做法最關鍵?',ok:'先確保抽樣框完整、回覆公平,再考慮增加樣本數。',bad:['只要把樣本數增加到很大就好。','盡量只調查容易聯絡的人以提高回收率。','刪除意見不同的受訪者,讓結果更一致。']},
+  ];
+  const it=pick(bank);
+  const explain=`樣本大是「精密」,抽得好才是「準確」。先問「抽得好不好」,再問「抽得夠不夠多」;增加樣本數只能降低隨機誤差,不能自動消除系統偏誤。`;
+  return {sub:'樣本大小與偏誤', q:it.s, answer:it.ok, options:fixedOptions([it.ok,...it.bad]), explain};
+}
+
+/* ===== 8-D 相關與因果 ===== */
+function stRvalue(){
+  const abs=shuffle([0.1,0.3,0.5,0.7,0.8,0.9]).slice(0,4);
+  const vals=abs.map(a=>Math.random()<0.5?a:-a);
+  const best=vals.reduce((m,x)=>Math.abs(x)>Math.abs(m)?x:m,vals[0]);
+  const q=`下列四個相關係數 r,哪一個代表「線性關係最強」?`;
+  const explain=`r 的方向看正負,強度看絕對值,越接近 ±1 線性關係越強。四個值的絕對值依序是 ${vals.map(v=>Math.abs(v)).join('、')},最大的是 |${best}|,所以 r = ${best} 最強(負號只代表方向相反)。`;
+  return {sub:'r大小比較', q, answer:best, options:fixedOptions(vals,x=>`r = ${x}`), explain, meta:{vals}};
+}
+function stRdesc(){
+  const r=pick([0.9,0.95,0.85,-0.9,-0.95,-0.85,0.02,-0.03,0.05]);
+  const OPT=['強正線性相關(但不等於因果)','強負線性相關(但不等於因果)','幾乎沒有線性關係(但仍可能有曲線關係)','兩者之間已證明有因果關係'];
+  const answer=r>=0.8?OPT[0]:(r<=-0.8?OPT[1]:OPT[2]);
+  const q=`兩個變數的相關係數 r = ${r}。下列哪一個描述最合理?`;
+  const explain=`r 介於 −1 與 1:方向看正負,強度看絕對值。r = ${r} ${Math.abs(r)>=0.8?'的絕對值很接近 1,所以是強'+(r>0?'正':'負')+'線性相關':'接近 0,只表示沒有明顯的線性關係,仍可能有曲線關係'}。相關強不代表因果。`;
+  return {sub:'r的意義', q, answer, options:fixedOptions(OPT), explain, meta:{r}};
+}
+function stAlt(){
+  const ALT=['反向因果(方向可能顛倒)','第三變項(另有共同原因)','巧合或選樣(只挑符合故事的資料)','已經證明兩者有直接因果關係'];
+  const bank=[
+    [1,'夏季冰品銷量與溺水人數同時上升','夏季高溫同時讓冰品熱賣、也讓更多人下水'],
+    [1,'某城市咖啡店數量與犯罪案件數同步增加','城市人口規模同時影響兩者'],
+    [1,'穿大尺碼鞋子的孩子閱讀測驗分數較高','年齡較大同時使鞋子變大、閱讀能力提高'],
+    [0,'查閱健康資訊越多的人,健康狀況越差','身體不舒服的人才會更常查閱健康資訊'],
+    [0,'常去醫院的人比不去的人更不健康','本來就生病的人才需要常去醫院'],
+    [2,'有人只挑出 3 個月份剛好同升的數據,說明兩者相關','只挑符合故事的資料,相關可能不穩定'],
+    [2,'某廣告只展示 5 位成功減重者,宣稱產品有效','只挑符合故事的案例,沒有看到沒成功的人'],
+  ];
+  const [m,s,why]=pick(bank);
+  const q=`${s}。下列哪一種說明,最適合用來解釋這個現象,避免直接下因果結論?`;
+  const explain=`一起變動只證明有關聯;因果還要排除反向因果與第三變項。本題最合理的是「${ALT[m]}」:${why}。`;
+  return {sub:'替代解釋', q, answer:ALT[m], options:fixedOptions(ALT), explain};
+}
+function stCausal(){
+  const bank=[
+    {s:'研究發現,每週運動次數越多的人,幸福感問卷分數越高。',ok:'運動次數與幸福感有正向關聯,但還不能直接判定是運動造成幸福感提高。',bad:['運動一定會讓人變幸福。','幸福感高是運動次數多的唯一原因。','兩者完全沒有關係。']},
+    {s:'某城市夏季冰品銷量與溺水人數同時上升。',ok:'兩者同時變動,可能是夏季高溫等第三個因素同時影響,尚不能判定因果。',bad:['吃冰品會導致溺水。','溺水事件導致人們多吃冰品。','這證明禁售冰品就能減少溺水。']},
+    {s:'調查發現,查閱健康資訊越多的人,健康狀況越差。',ok:'可能是身體不適的人才會更常查資訊,因果方向可能相反,不能直接說查資訊造成不健康。',bad:['查閱健康資訊會損害健康。','健康資訊全部都是錯誤的。','這證明健康的人不需要查資訊。']},
+    {s:'某班學生的睡眠時數越長,成績越好。',ok:'睡眠與成績有正向關聯,但仍需排除其他因素(如作息規律、學習習慣)才能談因果。',bad:['多睡一定會讓成績提高。','睡眠時數是影響成績的唯一原因。','成績好是因為睡得少。']},
+  ];
+  const it=pick(bank);
+  const q=`${it.s}下列哪一個結論最合理?`;
+  const explain=`相關是線索,因果需要設計(隨機分派、控制其他變項、時間先後、可重複)。看到「一定導致、證明造成、唯一原因」通常需要更強的證據;較合理的說法是「有關聯 / 可能」,也就是「${it.ok}」`;
+  return {sub:'相關結論語氣', q, answer:it.ok, options:fixedOptions([it.ok,...it.bad]), explain};
+}
+
+/* ===== 8-E 圖表、百分位與盒鬚圖 ===== */
+function stChart(){
+  const CH=['長條圖','折線圖','直方圖或盒鬚圖','散佈圖','圓餅圖'];
+  const bank=[
+    [0,'比較 5 家分店本月的營收。'],[0,'比較各縣市的人口數。'],[0,'比較不同血型的人數。'],
+    [1,'觀察過去 12 個月的用電量變化。'],[1,'記錄一週內每天的氣溫。'],[1,'追蹤近 10 年每年的出生人口。'],
+    [2,'了解 300 位學生成績是集中還是分散。'],[2,'觀察 500 位顧客年齡的分布形狀。'],
+    [3,'檢視讀書時數與成績是否有關係。'],[3,'檢視身高與體重兩個變數的關係。'],
+    [4,'呈現預算中各項支出占總額的比例。'],[4,'呈現全班各社團人數占全班的比例。'],
+  ];
+  const [m,s]=pick(bank);
+  const others=shuffle([0,1,2,3,4].filter(x=>x!==m)).slice(0,3);
+  const opts=[m,...others].map(i=>CH[i]);
+  const hint=['類別看長條','時間看折線','分布看直方與盒鬚','兩變數關係看散佈','整體組成看圓餅'][m];
+  const q=`${s}\n最適合用哪一種統計圖表呈現?`;
+  const explain=`先分資料型態:類別看長條、時間看折線、分布看直方圖或盒鬚圖、關係看散佈圖、整體組成看圓餅圖。本題:${hint},所以選「${CH[m]}」。`;
+  return {sub:'圖表選擇', q, answer:CH[m], options:fixedOptions(opts), explain};
+}
+function stPercentile(){
+  const P=pick([10,25,75,80,90,95]);
+  const ok=`大約有 ${P}% 的人成績不高於小明`;
+  const bad=[`小明答對了 ${P}% 的題目`,`小明的成績是 ${P} 分`,`大約有 ${P}% 的人成績高於小明`];
+  const q=`小明的成績在全體受測者的第 ${P} 百分位。下列哪一個敘述最正確?`;
+  const explain=`第 ${P} 百分位表示大約 ${P}% 的資料不高於這個值。它不是「答對 ${P}%」,也不一定是原始分數 ${P} 分。`;
+  return {sub:'百分位意義', q, answer:ok, options:fixedOptions([ok,...bad]), explain};
+}
+function stIQRcalc(){
+  const Q1=ri(20,60), iqr=ri(5,30), Q3=Q1+iqr;
+  const pool=[r2((Q1+Q3)/2),Q3,Q1,Q3+Q1].filter(x=>x!==iqr);
+  const q=`某資料的第一四分位數 Q1 = ${Q1},第三四分位數 Q3 = ${Q3}。請問四分位距 IQR 是多少?`;
+  const explain=`IQR = Q3 − Q1 = ${Q3} − ${Q1} = ${iqr}。IQR 描述中間 50% 資料的分散程度,比全距更不怕極端值。`;
+  return {sub:'IQR', q, answer:iqr, options:uniqOptions(iqr,()=>Math.max(1,iqr+ri(-6,6)),undefined,pool), explain, meta:{Q1,Q3}};
+}
+function stOutlier(){
+  const iqr=pick([8,10,12,14,16,20]), Q1=ri(40,70), Q3=Q1+iqr;
+  const lo=Q1-1.5*iqr, hi=Q3+1.5*iqr;
+  const out=Math.random()<0.5? hi+ri(2,10) : lo-ri(2,10);
+  const ins=new Set(); while(ins.size<3) ins.add(ri(lo+2,hi-2));
+  const q=`某資料的 Q1 = ${Q1},Q3 = ${Q3}。依「小於 Q1 − 1.5×IQR 或大於 Q3 + 1.5×IQR 為離群值」的判準,下列哪一個數值是離群值?`;
+  const explain=`IQR = ${Q3}−${Q1} = ${iqr};下界 = ${Q1}−1.5×${iqr} = ${lo},上界 = ${Q3}+1.5×${iqr} = ${hi}。只有 ${out} ${out>hi?`大於上界 ${hi}`:`小於下界 ${lo}`},其餘數值都落在 ${lo}~${hi} 之間,所以離群值是 ${out}。`;
+  return {sub:'離群判斷', q, answer:out, options:fixedOptions([out,...ins]), explain, meta:{Q1,Q3,lo,hi}};
+}
+function stChartTrap(){
+  const TR=['縱軸截斷(誇大差距)','用面積或大小誤導視覺','只看百分比、沒確認分母或基數','只看平均、沒看分布','長條圖與直方圖混用'];
+  const bank=[
+    [0,'某長條圖的縱軸從 90 開始畫起,讓 A 組(92)和 B 組(95)看起來差距超過一倍。'],
+    [0,'折線圖的縱軸只標出 50~52,讓一點點的變化看起來像劇烈波動。'],
+    [1,'用圖示的「高度和寬度都放大 2 倍」來代表數量只多 2 倍,視覺面積卻變成 4 倍。'],
+    [1,'用圓圈面積表示人口,卻把半徑直接按人口比例放大,使差距看起來大得多。'],
+    [2,'報導說「A 方案成長 300%」,卻沒說明原本的基數只有 1 件。'],
+    [2,'只說「支持率高出 20%」,卻沒有說明各自的調查人數與分母。'],
+    [3,'只報告班級平均 70 分,看不出有人 100 分、有人 40 分,分數其實非常分散。'],
+    [3,'兩家公司平均薪資相同,但其中一家是少數極高薪者拉高了平均。'],
+    [4,'把連續的年齡區間 20~29、30~39、40~49 畫成彼此分開、有間隔的長條。'],
+    [4,'把不同縣市(類別)的長條畫成緊緊相連,看起來像連續分布。'],
+  ];
+  const [m,s]=pick(bank);
+  const others=shuffle([0,1,2,3,4].filter(x=>x!==m)).slice(0,3);
+  const q=`${s}\n這最可能是哪一種圖表或數據解讀的陷阱?`;
+  const explain=['縱軸沒有從 0 開始會誇大差距,看圖要先看軸與單位。','用面積或圖示大小表示數量,容易讓視覺差距遠大於實際差距。','只看百分比要先確認分母(基數),否則很容易被誤導。','只看平均要確認分布;平均相同,分散程度可能完全不同。','長條圖用來比較類別、通常有間隔;直方圖代表連續區間、通常相連,兩者不可混用。'][m];
+  return {sub:'圖表陷阱', q, answer:TR[m], options:fixedOptions([m,...others].map(i=>TR[i])), explain};
+}
+const ST_NEW=[stInterp,stRegress,stResidual,stTrendWord, stSE,stCI,stTest,stErrBias,stCond, stSampleId,stSystemic,stStratum,stPurpose, stBiasType,stBiasMissing,stBiasFix,stBiasSize, stRvalue,stRdesc,stAlt,stCausal, stChart,stPercentile,stIQRcalc,stOutlier,stChartTrap];
+
+/* ===== 補強:原本只做一部分的 13 節 ===== */
+const Cn=(n,k)=>fact(n)/(fact(k)*fact(n-k));
+
+/* ---- 2-B 條件計算 ---- */
+function wkMargin(){
+  const L=pick([50,100,150,200]), T1=pick([-5,0,5,10]), dT=pick([20,30,40,50]), T2=T1+dT, pct=pick([20,25,50]);
+  const base=r2(L*1e-5*dT*100), k=1+pct/100, answer=r2(base*k);
+  const pool=[base, r2(base*pct/100), r2(L*1e-5*Math.abs(T2)*100*k), r2(answer/100)].filter(x=>x>0&&x!==answer);
+  const q=`某段長 ${L} 公尺的鋼軌,線膨脹係數 α = 10⁻⁵(每 °C),基本伸長量 ΔL = L × α × ΔT。溫度從 ${T1}°C 升到 ${T2}°C。設計時要在基本伸長量上再加 ${pct}% 的安全餘裕。請問應預留幾公分的伸長空間?(四捨五入至小數點後兩位)`;
+  const explain=`先算溫差 ΔT = ${T2} − (${T1}) = ${dT}°C;基本伸長量 = ${L} × 10⁻⁵ × ${dT} = ${r2(L*1e-5*dT)} 公尺 = ${base} 公分;最後才乘安全係數 ${k}:${base} × ${k} = ${answer} 公分。基本量與餘裕是兩個步驟,不能混在一起。`;
+  return {sub:'工程餘裕', q, answer, options:uniqOptions(answer,()=>r2(answer*(1+ri(-30,30)/100)),undefined,pool), explain, meta:{L,dT,pct}};
+}
+function wkUpDown(){
+  const P=pick([100,200,500,1000]), a=pick([10,20,25,50]), b=pick([10,20,25,50]);
+  const answer=r2(P*(1+a/100)*(1-b/100));
+  const pool=[P*(1+(a-b)/100), P, P*(1+a/100)*(1+b/100), P*(1-b/100)].map(r2).filter(x=>x>0&&x!==answer);
+  const q=`某商品原價 ${P} 元,先漲價 ${a}%,再降價 ${b}%,請問現價是多少元?`;
+  const explain=`連續百分比要用倍率相乘,不能直接相加減:${P} × ${1+a/100} × ${r2(1-b/100)} = ${answer} 元。(先漲 ${a}% 再降 ${b}% 的基準不同,不會剛好回到原價。)`;
+  return {sub:'先漲後降', q, answer, options:uniqOptions(answer,()=>r2(answer*(1+ri(-12,12)/100)),undefined,pool), explain, meta:{P,a,b}};
+}
+const WK_NEW2=[wkMargin,wkUpDown];
+const WK_ALL=[...WK_NEW,...WK_NEW2];
+
+/* ---- 4-1、4-2 排列 ---- */
+function pmGap(){
+  const m=ri(3,5), w=ri(2,Math.min(3,m+1));
+  const answer=fact(m)*Cn(m+1,w)*fact(w);
+  const pool=[fact(m+w), fact(m)*Cn(m,w)*fact(w), fact(m)*fact(w), fact(m)*Cn(m+1,w)].filter(x=>x!==answer);
+  const q=`${m} 位男生與 ${w} 位女生排成一列,任兩位女生都不可以相鄰,共有幾種排法?`;
+  const explain=`多個特殊項都不能相鄰時,先排普通項再插空:男生先排 ${m}! = ${fact(m)};排好後有 ${m}+1 = ${m+1} 個空隙(含最左與最右);從中選 ${w} 個空隙放女生,C(${m+1},${w}) = ${Cn(m+1,w)};女生之間還要排列 ${w}! = ${fact(w)}。相乘 = ${answer}。`;
+  return {sub:'插空排列', q, answer, options:uniqOptions(answer,()=>Math.max(1,Math.round(answer*(1+ri(-30,30)/100))),undefined,pool), explain, meta:{m,w}};
+}
+function pmBlock(){
+  const k=pick([2,3]), n=ri(k+2,8);
+  const answer=fact(k)*fact(n-k+1);
+  const pool=[fact(n), fact(n-k+1), fact(k)*fact(n-k), fact(n)-answer].filter(x=>x>0&&x!==answer);
+  const q=`${n} 人排成一列,其中指定的 ${k} 人必須相鄰(連在一起站),共有幾種排法?`;
+  const explain=`相鄰先綁成一塊:把這 ${k} 人視為 1 個區塊,加上其他 ${n-k} 人共 ${n-k+1} 個單位,排法 ${n-k+1}! = ${fact(n-k+1)};區塊內部 ${k} 人還要排列 ${k}! = ${fact(k)}。相乘 = ${answer}。`;
+  return {sub:'相鄰綁塊', q, answer, options:uniqOptions(answer,()=>Math.max(1,Math.round(answer*(1+ri(-30,30)/100))),undefined,pool), explain, meta:{n,k}};
+}
+function pmCircAdj(){
+  const n=ri(5,8), answer=2*fact(n-2);
+  const pool=[fact(n-1), 2*fact(n-1), fact(n-2), fact(n)].filter(x=>x!==answer);
+  const q=`${n} 人圍圓桌入座(旋轉後相同的坐法視為同一種),其中甲、乙兩人必須相鄰,共有幾種不同的坐法?`;
+  const explain=`先把甲乙綁成一塊:區塊 + 其他 ${n-2} 人 = ${n-1} 個單位圍圓桌,環排 (${n-1}−1)! = ${n-2}! = ${fact(n-2)};區塊內甲乙可以互換,再 ×2 = ${answer}。綁塊後仍是環排,所以只減一階。`;
+  return {sub:'環排相鄰', q, answer, options:uniqOptions(answer,()=>Math.max(1,Math.round(answer*(1+ri(-30,30)/100))),undefined,pool), explain, meta:{n}};
+}
+function pmCircNon(){
+  const n=ri(5,8), answer=fact(n-1)-2*fact(n-2);
+  const pool=[fact(n-1), 2*fact(n-2), fact(n)-2*fact(n-1), fact(n-2)].filter(x=>x>0&&x!==answer);
+  const q=`${n} 人圍圓桌入座(旋轉後相同的坐法視為同一種),其中甲、乙兩人不可以相鄰,共有幾種不同的坐法?`;
+  const explain=`不相鄰 = 全部環排 − 相鄰環排。全部:(${n}−1)! = ${fact(n-1)};甲乙相鄰:2×(${n}−2)! = ${2*fact(n-2)};相減 = ${answer}。`;
+  return {sub:'環排不相鄰', q, answer, options:uniqOptions(answer,()=>Math.max(1,Math.round(answer*(1+ri(-30,30)/100))),undefined,pool), explain, meta:{n}};
+}
+const PERM_NEW=[pmGap,pmBlock,pmCircAdj,pmCircNon];
+
+/* ---- 5-2 三圈、5-4 機率加法與互斥獨立 ---- */
+function venn3(){
+  const rA=ri(5,15), rB=ri(5,15), rC=ri(5,15), rAB=ri(2,6), rAC=ri(2,6), rBC=ri(2,6), rABC=ri(1,6);
+  return {rA,rB,rC,rAB,rAC,rBC,rABC, A:rA+rAB+rAC+rABC, B:rB+rAB+rBC+rABC, C:rC+rAC+rBC+rABC,
+          AB:rAB+rABC, AC:rAC+rABC, BC:rBC+rABC, union:rA+rB+rC+rAB+rAC+rBC+rABC};
+}
+function venn3Stem(v,N){
+  return `某班同學喜歡爬山、釣魚、露營三項活動:\n喜歡爬山 ${v.A} 人、釣魚 ${v.B} 人、露營 ${v.C} 人;\n爬山且釣魚 ${v.AB} 人、爬山且露營 ${v.AC} 人、釣魚且露營 ${v.BC} 人(都包含三項都喜歡的人);\n三項都喜歡的有 ${v.rABC} 人。${N?`\n全班共 ${N} 人。`:''}`;
+}
+function vnExactOne(){
+  const v=venn3(), answer=v.rA+v.rB+v.rC;
+  const pool=[v.A+v.B+v.C-(v.AB+v.AC+v.BC), v.union, answer+v.rABC, v.A+v.B+v.C-2*(v.AB+v.AC+v.BC)].filter(x=>x>0&&x!==answer);
+  const q=venn3Stem(v)+`\n請問「恰好只喜歡一項」的有多少人?`;
+  const explain=`先由中央往外填圖:只有 A = ${v.A}−${v.AB}−${v.AC}+${v.rABC} = ${v.rA};只有 B = ${v.B}−${v.AB}−${v.BC}+${v.rABC} = ${v.rB};只有 C = ${v.C}−${v.AC}−${v.BC}+${v.rABC} = ${v.rC}。三個單獨區相加 = ${answer}。(雙交集 AB、AC、BC 都包含中央,不能直接扣。)`;
+  return {sub:'三圈恰好一類', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-10,10)),undefined,pool), explain, meta:v};
+}
+function vnAtLeast2(){
+  const v=venn3(), answer=v.AB+v.AC+v.BC-2*v.rABC;
+  const pool=[v.AB+v.AC+v.BC, v.AB+v.AC+v.BC-v.rABC, v.rAB+v.rAC+v.rBC, v.AB+v.AC+v.BC-3*v.rABC].filter(x=>x>0&&x!==answer);
+  const q=venn3Stem(v)+`\n請問「至少喜歡兩項」的有多少人?`;
+  const explain=`AB + AC + BC = ${v.AB}+${v.AC}+${v.BC} = ${v.AB+v.AC+v.BC},但三項都喜歡的人在這三個數裡被算了 3 次,而只該算 1 次,所以要減 2 倍:${v.AB+v.AC+v.BC} − 2×${v.rABC} = ${answer}。`;
+  return {sub:'三圈至少兩類', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-8,8)),undefined,pool), explain, meta:v};
+}
+function vnFill(){
+  const v=venn3();
+  if(Math.random()<0.5){
+    const answer=v.AB-v.rABC;
+    const pool=[v.AB, v.AB+v.rABC, v.AB-v.AC, v.A-v.AB].filter(x=>x>0&&x!==answer);
+    const q=venn3Stem(v)+`\n請問「只喜歡爬山和釣魚這兩項(沒有喜歡露營)」的有多少人?`;
+    const explain=`「爬山且釣魚」${v.AB} 人包含了三項都喜歡的 ${v.rABC} 人,所以只有兩項的 = ${v.AB} − ${v.rABC} = ${answer}。填圖順序:中央 → 雙交集各扣掉中央 → 單獨區 → 圈外。`;
+    return {sub:'三圈填圖', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-5,5)),undefined,pool), explain, meta:{kind:0,...v}};
+  }
+  const N=v.union+ri(3,25), answer=N-v.union;
+  const pool=[v.union, N-(v.A+v.B+v.C), answer+v.rABC, N-(v.A+v.B+v.C-v.AB-v.AC-v.BC)].filter(x=>x>0&&x!==answer);
+  const q=venn3Stem(v,N)+`\n請問三項活動都不喜歡的有多少人?`;
+  const explain=`先用容斥求至少喜歡一項:${v.A}+${v.B}+${v.C}−${v.AB}−${v.AC}−${v.BC}+${v.rABC} = ${v.union};圈外 = 全班 − 聯集 = ${N} − ${v.union} = ${answer}。`;
+  return {sub:'三圈填圖', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-5,5)),undefined,pool), explain, meta:{kind:1,N,...v}};
+}
+function prAdd(){
+  if(Math.random()<0.4){
+    let a,b; do{a=pick([0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45]);b=pick([0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45])}while(a+b>1);
+    const answer=r2(a+b);
+    const pool=[r2(a*b), r2(a+b-a*b), r2(Math.max(a,b)), r2(1-a-b)].filter(x=>x>0&&x!==answer);
+    const q=`事件 A 與事件 B 互斥,且 P(A) = ${a},P(B) = ${b}。請問 P(A∪B) 是多少?`;
+    const explain=`一般式 P(A∪B) = P(A) + P(B) − P(A∩B)。互斥時 P(A∩B) = 0,所以可以直接相加:${a} + ${b} = ${answer}。`;
+    return {sub:'機率加法', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-3,3)*0.05),undefined,pool), explain, meta:{kind:0,a,b}};
+  }
+  let a,b,c;
+  do{a=pick([0.3,0.4,0.5,0.6]);b=pick([0.3,0.4,0.5,0.6]);c=pick([0.05,0.1,0.15,0.2])}while(c>Math.min(a,b)||a+b-c>1);
+  const answer=r2(a+b-c);
+  const pool=[r2(a+b), r2(a+b+c), r2(a*b), r2(a+b-a*b)].filter(x=>x>0&&x!==answer);
+  const q=`已知 P(A) = ${a},P(B) = ${b},P(A∩B) = ${c}。請問 P(A∪B) 是多少?`;
+  const explain=`能重疊的兩個事件,相加後交集被算了兩次,要扣回一次:P(A∪B) = P(A) + P(B) − P(A∩B) = ${a} + ${b} − ${c} = ${answer}。只有互斥(交集為 0)才可以直接相加。`;
+  return {sub:'機率加法', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-3,3)*0.05),undefined,pool), explain, meta:{kind:1,a,b,c}};
+}
+function prIndep(){
+  const REL=['互斥但不獨立','獨立但不互斥','既不互斥也不獨立','既互斥又獨立'];
+  if(Math.random()<0.2){
+    const OPT=['A、B 一定不獨立(因為 P(A∩B) = 0,但 P(A)×P(B) > 0)','A、B 一定獨立','A、B 可能獨立,也可能不獨立','互斥就代表彼此不影響,所以一定獨立'];
+    const q=`若事件 A、B 互斥,且 P(A) > 0、P(B) > 0,下列敘述何者正確?`;
+    const explain=`互斥代表不能同時發生,P(A∩B) = 0;獨立要求 P(A∩B) = P(A)×P(B)。兩個機率都大於 0 時,乘積大於 0,不可能等於 0,所以互斥(機率大於 0)一定不獨立。互斥看能否同時發生,獨立看機率是否受影響。`;
+    return {sub:'互斥與獨立', q, answer:OPT[0], options:fixedOptions(OPT), explain};
+  }
+  const bank=[
+    {s:'擲一顆公正的骰子,A = 擲出奇數,B = 擲出偶數。',a:0,w:'奇數與偶數不可能同時出現,P(A∩B) = 0,所以互斥;但 P(A)×P(B) = 1/2×1/2 = 1/4 ≠ 0,所以不獨立。'},
+    {s:'連續擲一枚公正硬幣兩次,A = 第一次正面,B = 第二次正面。',a:1,w:'兩次可以同時都是正面,不互斥;P(A∩B) = 1/4 = 1/2×1/2,所以獨立。'},
+    {s:'擲一顆公正的骰子,A = {1, 2},B = {2, 3}。',a:2,w:'兩者有共同的 2,不互斥;P(A∩B) = 1/6,而 P(A)×P(B) = 1/3×1/3 = 1/9,不相等,所以不獨立。'},
+    {s:'擲一顆公正的骰子,A = 擲出 1 點,B = 擲出 6 點。',a:0,w:'同一次不可能同時擲出 1 點和 6 點,P(A∩B) = 0,互斥;但 P(A)×P(B) = 1/36 ≠ 0,所以不獨立。'},
+    {s:'從一副 52 張的撲克牌中抽一張,A = 抽到紅心,B = 抽到 J、Q、K 其中之一。',a:1,w:'紅心的 J、Q、K 同時屬於 A 與 B,不互斥;P(A) = 1/4,P(B) = 12/52 = 3/13,P(A∩B) = 3/52 = 1/4×3/13,所以獨立。'},
+    {s:'同時擲兩顆公正的骰子,A = 第一顆是 6 點,B = 兩顆點數和為 7。',a:1,w:'(6, 1) 同時屬於兩個事件,不互斥;P(A) = 1/6,P(B) = 6/36 = 1/6,P(A∩B) = 1/36 = 1/6×1/6,所以獨立。'},
+  ];
+  const it=pick(bank);
+  const q=`${it.s}\n請問事件 A 與 B 的關係為何?`;
+  const explain=`${it.w}(互斥看能不能同時發生;獨立看 P(A∩B) 是否等於 P(A)×P(B)。)`;
+  return {sub:'互斥與獨立', q, answer:REL[it.a], options:fixedOptions(REL), explain};
+}
+const VENN_NEW=[vnExactOne,vnAtLeast2,vnFill,prAdd,prIndep];
+
+/* ---- 6-1 展開圖(用摺疊模擬,支援各種展開圖) ---- */
+function netRoll(st,dc,dr){
+  if(dc===1)  return {t:st.w,b:st.e,n:st.n,s:st.s,e:st.t,w:st.b};
+  if(dc===-1) return {t:st.e,b:st.w,n:st.n,s:st.s,e:st.b,w:st.t};
+  if(dr===1)  return {t:st.n,b:st.s,n:st.b,s:st.t,e:st.e,w:st.w};
+  return {t:st.s,b:st.n,n:st.t,s:st.b,e:st.e,w:st.w};
+}
+function foldNet(cells){
+  const key=(c,r)=>c+','+r, set=new Set(cells.map(([c,r])=>key(c,r)));
+  const res={}, seen=new Set();
+  const stack=[[cells[0][0],cells[0][1],{t:0,b:1,n:2,s:3,e:4,w:5}]];
+  while(stack.length){
+    const [c,r,st]=stack.pop(), k=key(c,r);
+    if(seen.has(k)) continue;
+    seen.add(k); res[k]=st.b;
+    for(const [dc,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nk=key(c+dc,r+dr);
+      if(set.has(nk)&&!seen.has(nk)) stack.push([c+dc,r+dr,netRoll(st,dc,dr)]);
+    }
+  }
+  return new Set(Object.values(res)).size===6 ? res : null;
+}
+const NETS=(()=>{
+  const L=[];
+  for(let a=0;a<4;a++)for(let b=0;b<4;b++) L.push([[a,0],[0,1],[1,1],[2,1],[3,1],[b,2]]);
+  L.push([[0,0],[1,0],[1,1],[2,1],[2,2],[3,2]]);
+  L.push([[0,0],[1,0],[2,0],[2,1],[3,1],[4,1]]);
+  for(const e of [[1,2],[2,2],[3,2]]) L.push([[0,0],[1,0],[1,1],[2,1],[3,1],e]);
+  return L.filter(c=>foldNet(c));
+})();
+function netSvg(cells,syms){
+  const S=46,pad=10;
+  const c0=Math.min(...cells.map(c=>c[0])), r0=Math.min(...cells.map(c=>c[1]));
+  const W=Math.max(...cells.map(c=>c[0]))-c0+1, H=Math.max(...cells.map(c=>c[1]))-r0+1;
+  let svg=`<svg viewBox="0 0 ${W*S+2*pad} ${H*S+2*pad}" style="width:100%;max-width:${Math.min(320,W*S+2*pad+60)}px;display:block;margin:0 auto 1rem">`;
+  cells.forEach(([c,r],i)=>{
+    const x=pad+(c-c0)*S, y=pad+(r-r0)*S;
+    svg+=`<rect x="${x}" y="${y}" width="${S}" height="${S}" rx="4" style="fill:var(--bg);stroke:var(--border);stroke-width:1.5"/>`;
+    svg+=`<text x="${x+S/2}" y="${y+S/2}" text-anchor="middle" dominant-baseline="central" font-size="22" style="fill:var(--text)">${syms[i]}</text>`;
+  });
+  return svg+`</svg>`;
+}
+function netTask(){
+  const cells=pick(NETS), fold=foldNet(cells);
+  const syms=shuffle(['●','▲','■','★','◆','✦']);
+  const info=cells.map((c,i)=>({sym:syms[i], f:fold[c[0]+','+c[1]]}));
+  const partner=a=>info.find(x=>x.f===(a.f^1));
+  const pairs=info.filter(a=>a.f<(a.f^1)).map(a=>`「${a.sym}」與「${partner(a).sym}」`).join('、');
+  return {cells,info,partner,pairs,svg:netSvg(cells,syms)};
+}
+function spNetAny(){
+  const T=netTask(), a=pick(T.info), b=T.partner(a);
+  const others=shuffle(T.info.filter(x=>x!==a&&x!==b)).slice(0,3).map(x=>x.sym);
+  const q=`上圖是一個正方體的展開圖。摺成正方體後,與「${a.sym}」那一面相對的是哪一個符號?`;
+  const explain=`把展開圖逐面摺起,相對的三組面是:${T.pairs}。所以「${a.sym}」的對面是「${b.sym}」。(相對面不相鄰、不共頂點;先找相對面,再摺剩下的。)`;
+  return {sub:'任意展開圖對面', q, diagram:T.svg, answer:b.sym, options:fixedOptions([b.sym,...others]), explain, meta:{cells:T.cells,info:T.info}};
+}
+function spNetRel(){
+  const T=netTask(), wantOpp=Math.random()<0.5;
+  const a=pick(T.info);
+  const b= wantOpp? T.partner(a) : pick(T.info.filter(x=>x!==a&&x!==T.partner(a)));
+  const OPT=['相對(不共邊、也不共頂點)','相鄰(共用一條邊)'];
+  const q=`上圖是一個正方體的展開圖。摺成正方體後,「${a.sym}」與「${b.sym}」這兩個面是相鄰還是相對?`;
+  const explain=`摺起後相對的三組面是:${T.pairs}。「${a.sym}」與「${b.sym}」${wantOpp?'正好是其中一組,所以相對':'不是同一組,所以相鄰(共用一條邊)'}。每個面只有 1 個對面,其餘 4 個面都和它相鄰。`;
+  return {sub:'展開圖相鄰或相對', q, diagram:T.svg, answer:wantOpp?OPT[0]:OPT[1], options:fixedOptions(OPT), explain, meta:{info:T.info,a:a.sym,b:b.sym,wantOpp}};
+}
+function spNetVertex(){
+  const T=netTask(), can=Math.random()<0.5;
+  let tri, tries=0;
+  do{
+    tri=shuffle([...T.info]).slice(0,3);
+    const hasOpp=tri.some(x=>tri.some(y=>y!==x&&(x.f^1)===y.f));
+    if(hasOpp!==can) break;
+    tries++;
+  }while(tries<200);
+  const hasOpp=tri.some(x=>tri.some(y=>y!==x&&(x.f^1)===y.f));
+  const OPT=['有可能(三面兩兩相鄰)','不可能(其中有一對互為相對面)'];
+  const q=`上圖是一個正方體的展開圖。摺成正方體後,「${tri[0].sym}」「${tri[1].sym}」「${tri[2].sym}」這三個面,有沒有可能在同一個頂點相遇?`;
+  const bad=hasOpp? tri.find(x=>tri.some(y=>y!==x&&(x.f^1)===y.f)) : null;
+  const explain=hasOpp
+    ? `摺起後相對的三組面是:${T.pairs}。這三個面裡「${bad.sym}」與「${T.partner(bad).sym}」互為相對面,相對面不共頂點,所以不可能同時交會於同一個頂點。`
+    : `摺起後相對的三組面是:${T.pairs}。這三個面之中沒有任何一對相對,所以兩兩相鄰;兩兩相鄰的三個面一定會在同一個頂點相遇。(任一對相對就淘汰。)`;
+  return {sub:'展開圖共頂點', q, diagram:T.svg, answer:hasOpp?OPT[1]:OPT[0], options:fixedOptions(OPT), explain, meta:{info:T.info,tri:tri.map(x=>x.sym),hasOpp}};
+}
+
+/* ---- 6-2 旋轉與鏡射 ---- */
+function spMirror(){
+  const same='仍是 A→B→C(順時針次序不變)', rev='變成 A→C→B(順時針次序反轉)';
+  if(Math.random()<0.6){
+    const OPS=[['順時針旋轉 90°',0],['旋轉 180°',0],['逆時針旋轉 90°',0],['左右翻轉(鏡射)',1],['上下翻轉(鏡射)',1]];
+    const [op,m]=pick(OPS);
+    const q=`某圖形上有 A、B、C 三個標記,沿順時針方向依序排列為 A→B→C。把圖形${op}之後,三個標記沿順時針方向的次序是?`;
+    const explain=m
+      ? `鏡射會把左右(或上下)次序反轉,所以原本順時針的 A→B→C 變成 A→C→B。`
+      : `旋轉只是換方向,各標記的順時針次序不會改變,所以仍是 A→B→C。`;
+    return {sub:'旋轉與鏡射', q, answer:m?rev:same, options:fixedOptions([same,rev]), explain, meta:{mirror:!!m}};
+  }
+  const mirrored=Math.random()<0.5;
+  const OPT=['可以,旋轉不會改變順時針次序','不可以,必須經過鏡射(翻面)才能做到'];
+  const q=`某圖形上有 A、B、C 三個標記,原本沿順時針方向依序排列為 A→B→C。經過某種變換後,順時針次序變成 ${mirrored?'A→C→B':'A→B→C'}(整個圖形的位置或方向可能不同)。請問這個變換「只靠旋轉」能不能做到?`;
+  const explain=mirrored
+    ? `旋轉保留順時針次序,鏡射才會把次序反轉。次序已經從 A→B→C 變成 A→C→B,只靠旋轉做不到。`
+    : `次序仍是 A→B→C,沒有被反轉,只靠旋轉就能做到(旋轉不會改變左右手性)。`;
+  return {sub:'旋轉與鏡射', q, answer:mirrored?OPT[1]:OPT[0], options:fixedOptions(OPT), explain, meta:{mirror:mirrored}};
+}
+function spSymmetry(){
+  const CAT=['只有線對稱','只有點對稱(繞中心轉 180° 能重合)','線對稱與點對稱都有','兩者都沒有'];
+  const bank=[
+    ['等腰三角形(三邊不全相等)',0,'沿頂角平分線對折能重合;轉 180° 後頂點朝下,不能重合。'],
+    ['正三角形',0,'有三條對稱軸;轉 180° 後頂點朝下,不能重合,所以沒有點對稱。'],
+    ['平行四邊形(不是長方形也不是菱形)',1,'繞中心轉 180° 能重合;但沿任何一條直線對折都不能重合。'],
+    ['長方形(不是正方形)',2,'有兩條對稱軸,繞中心轉 180° 也能重合。'],
+    ['菱形(不是正方形)',2,'兩條對角線都是對稱軸,繞中心轉 180° 也能重合。'],
+    ['正五邊形',0,'有 5 條對稱軸;邊數是奇數,轉 180° 不能重合。'],
+    ['正六邊形',2,'有 6 條對稱軸;邊數是偶數,轉 180° 能重合。'],
+    ['等腰梯形(上下底不等長)',0,'沿上下底的中垂線對折能重合;旋轉 180° 上下底會對調,不能重合。'],
+    ['一般梯形(兩腰不等長)',3,'沒有對稱軸,轉 180° 也不能重合。'],
+    ['圓',2,'任何一條直徑都是對稱軸,繞圓心轉任何角度(包括 180°)都能重合。'],
+    ['英文字母 H(無襯線字體)',2,'上下、左右都能對折,轉 180° 也不變。'],
+    ['英文字母 N(無襯線字體)',1,'轉 180° 仍是 N;但沒有任何一條直線能讓它對折重合。'],
+    ['英文字母 A(無襯線字體)',0,'沿中間的鉛直線對折能重合;轉 180° 會上下顛倒,不能重合。'],
+    ['英文字母 T(無襯線字體)',0,'沿中間的鉛直線對折能重合;轉 180° 會上下顛倒。'],
+    ['英文字母 F(無襯線字體)',3,'沒有對稱軸,轉 180° 也不能重合。'],
+    ['英文字母 Z(無襯線字體)',1,'轉 180° 仍是 Z;但沒有對稱軸。'],
+    ['英文字母 X(無襯線字體)',2,'上下、左右都能對折,轉 180° 也不變。'],
+  ];
+  const [name,m,why]=pick(bank);
+  const q=`下列圖形具有哪一種對稱?\n${name}`;
+  const explain=`線對稱:沿一條鏡線對折能完全重合;點對稱:繞中心轉 180° 能完全重合(等同旋轉,不是鏡射)。${why}`;
+  return {sub:'對稱判定', q, answer:CAT[m], options:fixedOptions(CAT), explain};
+}
+function spTurnBig(){
+  const dirs=['北','東','南','西'];
+  const TURNS=[['右轉90°',1],['左轉90°',3],['轉180°',2],['右轉270°',3],['左轉270°',1],['轉360°',0]];
+  const n=ri(2,3), start=ri(0,3), seq=[]; let net=0;
+  for(let i=0;i<n;i++){ const t=pick(TURNS); seq.push(t[0]); net+=t[1] }
+  net%=4;
+  const answer=dirs[(start+net)%4];
+  const q=`小明一開始面向${dirs[start]}方,依序做了以下動作:${seq.join('、')}。請問小明最後面向哪個方向?`;
+  const explain=`大角度先化簡:右轉 270° = 左轉 90°,左轉 270° = 右轉 90°,轉 360° 回到原方向,轉 180° 方向一定相反。把所有動作換成「順時針幾格」後合計 ${net} 格,從「${dirs[start]}」出發最後面向「${answer}」。`;
+  return {sub:'轉角化簡', q, answer, options:fixedOptions(dirs), explain, meta:{start,net}};
+}
+
+/* ---- 6-3 截面(圓柱、圓錐、邊數) ---- */
+const SECT_STYLE='fill:none;stroke:var(--sub);stroke-width:1.5';
+const SECT_CUT='fill:var(--accent);fill-opacity:.18;stroke:var(--accent);stroke-width:2';
+function cylSvg(k){
+  let s=`<svg viewBox="0 0 200 180" style="width:100%;max-width:240px;display:block;margin:0 auto 1rem">`;
+  s+=`<ellipse cx="100" cy="40" rx="50" ry="14" style="${SECT_STYLE}"/>`;
+  s+=`<path d="M50,40 L50,140 A50,14 0 0 0 150,140 L150,40" style="${SECT_STYLE}"/>`;
+  s+=`<path d="M50,140 A50,14 0 0 1 150,140" style="${SECT_STYLE};stroke-dasharray:4 3"/>`;
+  if(k===0) s+=`<ellipse cx="100" cy="90" rx="50" ry="14" style="${SECT_CUT}"/>`;
+  if(k===1) s+=`<line x1="100" y1="26" x2="100" y2="154" style="${SECT_CUT}"/>`;
+  if(k===2) s+=`<line x1="50" y1="70" x2="150" y2="115" style="${SECT_CUT}"/>`;
+  return s+`</svg>`;
+}
+function coneSvg(k){
+  let s=`<svg viewBox="0 0 200 180" style="width:100%;max-width:240px;display:block;margin:0 auto 1rem">`;
+  s+=`<path d="M100,20 L45,140 A55,15 0 0 0 155,140 Z" style="${SECT_STYLE}"/>`;
+  s+=`<path d="M45,140 A55,15 0 0 1 155,140" style="${SECT_STYLE};stroke-dasharray:4 3"/>`;
+  if(k===0) s+=`<ellipse cx="100" cy="90" rx="32" ry="9" style="${SECT_CUT}"/>`;
+  if(k===1) s+=`<line x1="100" y1="20" x2="100" y2="155" style="${SECT_CUT}"/>`;
+  if(k===2) s+=`<line x1="77" y1="70" x2="139" y2="105" style="${SECT_CUT}"/>`;
+  return s+`</svg>`;
+}
+function spCyl(){
+  const k=ri(0,2);
+  const D=['平行於上下底面','垂直於底面,並且通過圓柱的中軸','與底面斜交,而且只穿過側面(沒有碰到上、下底面)'];
+  const A=['圓','長方形','橢圓'];
+  const OPT=['圓','長方形','橢圓','三角形'];
+  const explain=['平行底面的切面會保留底面的形狀,所以是圓。','垂直底面並穿過中軸,切面兩側是側面的兩條母線、上下是兩條直徑,所以是長方形。','斜切時只穿過曲面,切出的邊界是封閉曲線,形狀是橢圓(曲面立體可能得到圓、橢圓或帶直邊的圖形)。'][k];
+  return {sub:'圓柱截面', q:`用一個平面切過一個圓柱,切面${D[k]}。(圖中色線代表切面的位置)請問斷面的形狀是?`, diagram:cylSvg(k), answer:A[k], options:fixedOptions(OPT), explain:explain+'(截面不是外觀,只看切開後露出的平面。)'};
+}
+function spCone(){
+  const k=ri(0,2);
+  const D=['平行於底面','垂直於底面,並且通過頂點與中軸','不通過頂點,與中軸斜交,而且只穿過側面(沒有碰到底面)'];
+  const A=['圓','等腰三角形','橢圓'];
+  const OPT=['圓','等腰三角形','橢圓','長方形'];
+  const explain=['平行底面的切面是一個縮小的圓。','通過頂點與中軸的切面左右對稱,兩邊是兩條母線、底邊是一條直徑,所以是等腰三角形。','斜切且只穿過側面,邊界是封閉曲線,形狀是橢圓。'][k];
+  return {sub:'圓錐截面', q:`用一個平面切過一個圓錐,切面${D[k]}。(圖中色線代表切面的位置)請問斷面的形狀是?`, diagram:coneSvg(k), answer:A[k], options:fixedOptions(OPT), explain:explain+'(截面不是外觀,只看切開後露出的平面。)'};
+}
+function spSides(){
+  const n=ri(3,6), NM={3:'三角形',4:'四邊形',5:'五邊形',6:'六邊形'};
+  const q=`用一個平面切過一個正方體,切面一共穿過了正方體的 ${n} 個面。斷面會是幾邊形?`;
+  const explain=`截面的每一條邊,都落在被切到的一個面上,所以穿過 ${n} 個面就是 ${n} 邊形。正方體只有 6 個面,所以斷面最多是六邊形。(切一個角穿過 3 個面 → 三角形;斜切多面可以得到六邊形。)`;
+  return {sub:'截面邊數', q, answer:NM[n], options:fixedOptions(Object.values(NM)), explain, meta:{n}};
+}
+const SPATIAL_ALL=[spNet,spTurn,spCut,spTrig,spProj,spNetAny,spNetRel,spNetVertex,spMirror,spSymmetry,spTurnBig,spCyl,spCone,spSides];
+
+/* ---- 8-1 平均數、8-3 變異與常態 ---- */
+function stExtreme(){
+  const m=ri(5,25)*2, d=pick([2,4,6]), X=pick([60,80,100,150,200]);
+  const data=[m-d,m,m+d];
+  const mean=r2((3*m+X)/4), med=m+d/2;
+  const askMean=Math.random()<0.5, answer=askMean?mean:med;
+  const pool=askMean?[m, med, r2((3*m+X)/3)]:[m, mean, m+d];
+  const q=`原資料為 ${data.join('、')}。加入一個極端值 ${X} 後,新資料的${askMean?'平均數(四捨五入至小數點後兩位)':'中位數'}是多少?`;
+  const explain=`新資料共 4 個數:${data.join('、')}、${X}。${askMean?`平均數 = (${3*m}+${X}) ÷ 4 = ${mean}(原來是 ${m},被極端值大幅拉高)`:`排序後中間兩個是 ${m} 與 ${m+d},中位數 = (${m}+${m+d}) ÷ 2 = ${med}(原來是 ${m},幾乎沒動)`}。極端值拉平均,中位數守中間。`;
+  return {sub:'極端值影響', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-6,6)*2),undefined,pool.filter(x=>x!==answer)), explain, meta:{m,d,X,askMean}};
+}
+function stMeanBack(){
+  const k=ri(3,5); let M,vals,x,tries=0;
+  do{
+    M=ri(60,90); vals=Array.from({length:k},()=>ri(50,100));
+    x=M*(k+1)-vals.reduce((a,b)=>a+b,0); tries++;
+  }while((x<30||x>100)&&tries<5000);
+  const sum=vals.reduce((a,b)=>a+b,0);
+  const pool=[M, r2(sum/k), M*k-sum, x+M-sum%M||x+1].filter(v=>v>0&&v!==x);
+  const q=`${k+1} 位同學的某科平均成績是 ${M} 分,其中 ${k} 位同學的成績分別是 ${vals.join('、')} 分。請問第 ${k+1} 位同學的成績是多少分?`;
+  const explain=`缺值先找總和:總和 = 平均 × 個數 = ${M} × ${k+1} = ${M*(k+1)};已知 ${k} 位的總和 = ${sum};缺的那位 = ${M*(k+1)} − ${sum} = ${x} 分。`;
+  return {sub:'平均數反推', q, answer:x, options:uniqOptions(x,()=>Math.max(1,x+ri(-8,8)),undefined,pool), explain, meta:{k,M,vals}};
+}
+function stTypical(){
+  const base=Array.from({length:4},()=>ri(3,5)), X=ri(18,40);
+  const data=shuffle([...base,X]);
+  const s=[...data].sort((a,b)=>a-b), med=s[2], mean=r2(data.reduce((a,b)=>a+b,0)/5);
+  const OPT=['中位數','平均數','最大值','總和'];
+  const q=`某公司 5 位員工的月薪(萬元)為:${data.join('、')}。若要描述「一般員工的典型薪資」,用哪一個統計量最合適?`;
+  const explain=`這組資料有一個極端值 ${X}。平均數 = ${mean},被極端值拉高,比多數員工的薪水高很多;中位數 = ${med},代表排序後的中間位置,不怕極端值。資料有離群值、薪資差距大時,典型值看中位數。`;
+  return {sub:'典型值判斷', q, answer:OPT[0], options:fixedOptions(OPT), explain, meta:{data,med,mean}};
+}
+function stStd(){
+  if(Math.random()<0.65){
+    const v=pick([4,9,16,25,36,49,64,81,100,144,10,20,50]), answer=r2(Math.sqrt(v));
+    const pool=[r2(v/2), v, r2(Math.sqrt(v)*2), r2(v*v)].filter(x=>x>0&&x!==answer);
+    const q=`某組資料的變異數為 ${v},請問標準差是多少?(四捨五入至小數點後兩位)`;
+    const explain=`標準差 = √變異數 = √${v} ≈ ${answer}。(變異數是離均差平方後的平均;標準差再開根號,單位才會回到原資料的單位。)`;
+    return {sub:'標準差', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-3,3)),undefined,pool), explain, meta:{kind:0,v}};
+  }
+  const sd=ri(2,15), answer=sd*sd;
+  const pool=[sd, 2*sd, Math.round(sd/2)].filter(x=>x>0&&x!==answer);
+  const q=`某組資料的標準差為 ${sd},請問變異數是多少?`;
+  const explain=`變異數 = 標準差的平方 = ${sd}² = ${answer}。`;
+  return {sub:'標準差', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-12,12)),undefined,pool), explain, meta:{kind:1,sd}};
+}
+function stZ(){
+  const mu=pick([50,60,70,80,100]), sd=pick([10,20]), z=pick([-2,-1.5,-1,-0.5,0.5,1,1.5,2,2.5]);
+  const x=mu+z*sd;
+  if(Math.random()<0.5){
+    const pool=[-z, x-mu, r2((x-mu)/(sd*sd)), r2(sd/(x-mu))].filter(v=>Number.isFinite(v)&&v!==z);
+    const q=`某次考試的平均 μ = ${mu},標準差 σ = ${sd}。小明得 ${x} 分,他的 z 分數是多少?`;
+    const explain=`z = (觀察值 − 平均數) ÷ 標準差 = (${x} − ${mu}) ÷ ${sd} = ${z}。z ${z>0?'> 0 在平均右邊':'< 0 在平均左邊'},絕對值是離平均幾個標準差。`;
+    return {sub:'z分數', q, answer:z, options:uniqOptions(z,()=>r2(z+ri(-3,3)*0.5),undefined,pool), explain, meta:{kind:0,mu,sd,x,z}};
+  }
+  const pool=[mu-z*sd, z*sd, mu+z].filter(v=>v!==x);
+  const q=`某次考試的平均 μ = ${mu},標準差 σ = ${sd}。小華的 z 分數是 ${z},他的成績是多少分?`;
+  const explain=`由 z = (x − μ) ÷ σ 反推:x = μ + z×σ = ${mu} + (${z})×${sd} = ${x} 分。`;
+  return {sub:'z分數', q, answer:x, options:uniqOptions(x,()=>x+ri(-4,4)*5,undefined,pool), explain, meta:{kind:1,mu,sd,x,z}};
+}
+function stNormal(){
+  if(Math.random()<0.55){
+    const mu=pick([50,60,70,80,100]), sd=pick([5,10,15]), k=pick([1,2,3]);
+    const OPT=['約 68%','約 95%','約 99.7%','約 50%'];
+    const answer=OPT[k-1];
+    const q=`某常態分布的平均為 ${mu}、標準差為 ${sd}。資料落在 ${mu-k*sd} 到 ${mu+k*sd} 之間(平均 ± ${k} 個標準差)的比例約為多少?`;
+    const explain=`常態分布的經驗法則:μ ± 1σ 約 68%、μ ± 2σ 約 95%、μ ± 3σ 約 99.7%。本題是 μ ± ${k}σ,所以${answer}。`;
+    return {sub:'常態分布', q, answer, options:fixedOptions(OPT), explain, meta:{k}};
+  }
+  const z=pick([-3,-2,-1.5,-1,1,1.5,2,3]), a=Math.abs(z);
+  const OPT=[`低於平均 ${a} 個標準差`,`高於平均 ${a} 個標準差`,'剛好等於平均','與平均的距離無關,只和單位有關'];
+  const answer=z<0?OPT[0]:OPT[1];
+  const q=`某個觀察值的 z 分數是 ${z},下列哪一個敘述正確?`;
+  const explain=`z 就是離平均幾個標準差:正負看方向(z > 0 在平均右邊,z < 0 在左邊),絕對值看距離。z = ${z},所以${answer}。`;
+  return {sub:'常態分布', q, answer, options:fixedOptions(OPT), explain, meta:{z}};
+}
+function stSpread(){
+  const m=pick([50,60,70,80]), a=ri(1,2), b=ri(a+1,3), c=pick([10,20,30]), d2=pick([5,10,15]);
+  const tight=[m-b,m-a,m,m+a,m+b], wide=[m-c,m-d2,m,m+d2,m+c];
+  const wideIsA=Math.random()<0.5;
+  const A=wideIsA?wide:tight, B=wideIsA?tight:wide;
+  const OPT=['A 組','B 組','兩組一樣大','無法比較'];
+  const q=`A、B 兩組資料各有 5 個數:\nA:${A.join('、')}\nB:${B.join('、')}\n兩組的平均數相同(都是 ${m})。請問哪一組的標準差較大?`;
+  const explain=`平均相同不代表資料相似,標準差越大,資料越分散。${wideIsA?'A':'B'} 組的數字離平均 ${m} 很遠(${wide[0]}~${wide[4]}),另一組很集中(${tight[0]}~${tight[4]}),所以${wideIsA?'A':'B'} 組的標準差較大。`;
+  return {sub:'比較分散程度', q, answer:wideIsA?OPT[0]:OPT[1], options:fixedOptions(OPT), explain, meta:{A,B}};
+}
+const ST_NEW2=[stExtreme,stMeanBack,stTypical,stStd,stZ,stNormal,stSpread];
+const ST_ALL=[...ST_NEW,...ST_NEW2];
+
+/* ---- 10-1、10-3、10-5 函數建模 ---- */
+function ftScenario(){
+  const C=[['手機通話費','月租費','每分鐘','分鐘'],['健身房','入會費','每個月','個月'],['影印店','基本費','每張','張']];
+  const [name,fix,unit,u2]=pick(C);
+  const b=ri(3,20)*10, m=ri(1,6)*(name==='健身房'?100:1), x=ri(5,30);
+  if(Math.random()<0.5){
+    const answer=m*x+b;
+    const pool=[m*x, b+m, (b+m)*x, b*x+m].filter(v=>v>0&&v!==answer);
+    const q=`${name}的收費方式:${fix} ${b} 元,${unit}加收 ${m} 元。請問用了 ${x} ${u2},總共要付多少元?`;
+    const explain=`y = mx + b:m = ${m} 是每單位變化率,b = ${b} 是固定費。y = ${m}×${x} + ${b} = ${answer} 元。(x = 0 代入要得到固定起始量。)`;
+    return {sub:'線性情境', q, answer, options:uniqOptions(answer,()=>Math.max(1,answer+ri(-6,6)*10),undefined,pool), explain, meta:{kind:0,m,b,x}};
+  }
+  const y=m*x+b;
+  const pool=[Math.round(y/m), x+b, Math.round((y+b)/m), y-b].filter(v=>v>0&&v!==x);
+  const q=`${name}的收費方式:${fix} ${b} 元,${unit}加收 ${m} 元。某人總共付了 ${y} 元,請問他用了幾${u2.replace('個月','個月')}?`;
+  const explain=`y = mx + b,先把固定費扣掉再除以單位費用:x = (${y} − ${b}) ÷ ${m} = ${x}。`;
+  return {sub:'線性情境', q, answer:x, options:uniqOptions(x,()=>Math.max(1,x+ri(-5,5)),undefined,pool), explain, meta:{kind:1,m,b,y}};
+}
+function ftSlope(){
+  let m; do{m=ri(-5,9)}while(m===0);
+  const b=ri(-10,20), x1=ri(0,5), x2=x1+ri(2,5), y1=m*x1+b, y2=m*x2+b;
+  if(Math.random()<0.5){
+    const pool=[y2-y1, m+1, -m, (y2+y1)/(x1+x2)].filter(v=>Number.isInteger(v)&&v!==m);
+    const q=`某線性關係 y = mx + b 通過兩點 (${x1}, ${y1}) 與 (${x2}, ${y2})。請問斜率 m 是多少?`;
+    const explain=`斜率 = Δy ÷ Δx = (${y2} − ${y1}) ÷ (${x2} − ${x1}) = ${y2-y1} ÷ ${x2-x1} = ${m}。`;
+    return {sub:'反推斜率', q, answer:m, options:uniqOptions(m,()=>m+ri(-4,4),undefined,pool), explain, meta:{kind:0,x1,y1,x2,y2,m}};
+  }
+  const pool=[y1, m, y1-m, b+m].filter(v=>v!==b);
+  const q=`某線性關係 y = mx + b 通過兩點 (${x1}, ${y1}) 與 (${x2}, ${y2})。請問 x = 0 時的 y 值(也就是 b)是多少?`;
+  const explain=`先求斜率 m = (${y2} − ${y1}) ÷ (${x2} − ${x1}) = ${m};再用任一點求 b = y − m×x = ${y1} − ${m}×${x1} = ${b}。`;
+  return {sub:'反推斜率', q, answer:b, options:uniqOptions(b,()=>b+ri(-8,8),undefined,pool), explain, meta:{kind:1,x1,y1,x2,y2,b}};
+}
+function ftRate(){
+  const d=10, e=ri(2,6), b=ri(3,8), x0=ri(2,9)*10;
+  const m=e/d, answer=r2(b+m*x0);
+  const pool=[b+e*x0, r2(m*x0), b+e, r2((b+e)*x0/d)].map(r2).filter(v=>v>0&&v!==answer);
+  const q=`某儀器的量測誤差與溫度成線性關係:溫度每升高 ${d}°C,誤差增加 ${e} mm;溫度為 0°C 時誤差是 ${b} mm。請問溫度為 ${x0}°C 時,誤差是多少 mm?`;
+  const explain=`先求單位變化率 m = ${e} ÷ ${d} = ${m} mm/°C,起始量 b = ${b};y = ${m}×${x0} + ${b} = ${answer} mm。`;
+  return {sub:'單位變化率', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-5,5)),undefined,pool), explain, meta:{d,e,b,x0}};
+}
+function ftTaxi(){
+  const b=pick([1.0,1.2,1.5]), F=pick([70,85,100]), c=pick([5,6]), k=ri(3,12);
+  const D=r1(b+0.2*k), answer=F+k*c;
+  const pool=[F+(k+1)*c, F+(k-1)*c, F+Math.round(D*1000/200)*c, F+Math.round(D)*c].filter(v=>v!==answer);
+  const q=`計程車計費:起跳 ${b} 公里內 ${F} 元,之後每 200 公尺加收 ${c} 元。行駛 ${D} 公里,車資是多少元?`;
+  const explain=`先扣掉起跳距離:${D} − ${b} = ${r1(D-b)} 公里 = ${Math.round((D-b)*1000)} 公尺;每 200 公尺一段,共 ${k} 段;車資 = ${F} + ${k}×${c} = ${answer} 元。(別把起跳那一段也算進去。)`;
+  return {sub:'計程車計費', q, answer, options:uniqOptions(answer,()=>F+ri(1,14)*c,undefined,pool), explain, meta:{b,F,c,k,D}};
+}
+function ftTier(){
+  const T1=pick([60,100,120]), T2=T1+pick([40,80,100]), a=pick([2,2.5,3]), b2=pick([3.5,4,4.5]), c3=pick([5,5.5,6]);
+  const U=Math.random()<0.7? T2+ri(10,60) : T1+ri(10,Math.max(10,T2-T1-10));
+  const answer=r2(Math.min(U,T1)*a+Math.max(0,Math.min(U,T2)-T1)*b2+Math.max(0,U-T2)*c3);
+  const pool=[U*c3, U*b2, T1*a+(U-T1)*c3, U*a].map(r2).filter(v=>v>0&&v!==answer);
+  const q=`某電價分三段:前 ${T1} 度每度 ${a} 元;超過 ${T1} 度到 ${T2} 度的部分每度 ${b2} 元;超過 ${T2} 度的部分每度 ${c3} 元。某月用電 ${U} 度,電費是多少元?`;
+  const seg1=Math.min(U,T1), seg2=Math.max(0,Math.min(U,T2)-T1), seg3=Math.max(0,U-T2);
+  const explain=`跨級時逐段累加,每段只算自己涵蓋的度數:${seg1}×${a} + ${seg2}×${b2} + ${seg3}×${c3} = ${answer} 元。各段度數相加 ${seg1}+${seg2}+${seg3} = ${U},要回到總用量。`;
+  return {sub:'多段電費', q, answer, options:uniqOptions(answer,()=>r2(answer+ri(-8,8)*5),undefined,pool), explain, meta:{T1,T2,a,b2,c3,U}};
+}
+function ftFree(){
+  const f=pick([5,10,12,20]), c=pick([15,20,25,30]), n=f+ri(2,8), answer=(n-f)*c;
+  const pool=[n*c, f*c, (n-f-1)*c, (n-f+1)*c].filter(v=>v>0&&v!==answer);
+  const q=`某網店規定:購買前 ${f} 件免運費,從第 ${f+1} 件起,每件加收運費 ${c} 元。若買 ${n} 件,運費是多少元?`;
+  const explain=`免運的 ${f} 件不收費,只有超過門檻的件數要算:${n} − ${f} = ${n-f} 件,運費 = ${n-f}×${c} = ${answer} 元。不要把全部 ${n} 件都乘上單價。`;
+  return {sub:'門檻運費', q, answer, options:uniqOptions(answer,()=>Math.max(c,answer+ri(-3,3)*c),undefined,pool), explain, meta:{f,c,n}};
+}
+function ftPattern(){
+  const OPT=['線性(每期加固定量)','倍增(每期乘固定倍數)','週期(循環重複)','以上皆非'];
+  const t=ri(0,2); let seq;
+  if(t===0){ const s=ri(1,10), d=ri(2,9); seq=Array.from({length:5},(_,i)=>s+d*i) }
+  else if(t===1){ const s=ri(1,4), r=pick([2,3]); seq=Array.from({length:5},(_,i)=>s*Math.pow(r,i)) }
+  else { const p=ri(3,4); const cyc=shuffle([1,2,3,4,5,6,7,8,9]).slice(0,p); seq=Array.from({length:p*2},(_,i)=>cyc[i%p]) }
+  const q=`某項資料前幾期依序為:${seq.join(', ')}, ...\n請問它最符合哪一種規律?`;
+  const explain=[
+    `相鄰兩項的差固定(每期都加 ${seq[1]-seq[0]}),是線性規律。`,
+    `相鄰兩項的比固定(每期都乘 ${seq[1]/seq[0]}),是倍增規律。`,
+    `數字會不斷循環重複,是週期規律。(先辨加法、乘法或週期,再外推一格。)`][t];
+  return {sub:'規律辨別', q, answer:OPT[t], options:fixedOptions(OPT), explain, meta:{seq,t}};
+}
+function ftPredict(){
+  const t=ri(0,2);
+  if(t===0){
+    const a=ri(2,12), d=ri(2,9), N=ri(8,15), answer=a+(N-1)*d;
+    const pool=[a+N*d, N*d, a*d*N, a+(N-2)*d].filter(v=>v!==answer);
+    const q=`某資料第 1 期為 ${a},之後每期都比前一期增加 ${d}。請問第 ${N} 期是多少?`;
+    const explain=`這是每期加固定量的線性規律:第 ${N} 期 = 第 1 期 + (${N}−1) × ${d} = ${a} + ${(N-1)*d} = ${answer}。`;
+    return {sub:'規律預測', q, answer, options:uniqOptions(answer,()=>answer+ri(-4,4)*d,undefined,pool), explain, meta:{t,a,d,N}};
+  }
+  if(t===1){
+    const a=ri(1,4), r=pick([2,3]), N=ri(5,8), answer=a*Math.pow(r,N-1);
+    const pool=[a*Math.pow(r,N), a+(N-1)*r, a*r*(N-1), a*Math.pow(r,N-2)].filter(v=>v!==answer);
+    const q=`某資料第 1 期為 ${a},之後每期都變成前一期的 ${r} 倍。請問第 ${N} 期是多少?`;
+    const explain=`這是每期乘固定倍數的倍增規律:第 ${N} 期 = ${a} × ${r}^(${N}−1) = ${a} × ${Math.pow(r,N-1)} = ${answer}。`;
+    return {sub:'規律預測', q, answer, options:uniqOptions(answer,()=>answer+ri(-3,3)*a*Math.pow(r,N-3),undefined,pool), explain, meta:{t,a,r,N}};
+  }
+  const p=ri(3,5), cyc=shuffle([1,2,3,4,5,6,7,8,9]).slice(0,p), N=ri(12,40), answer=cyc[(N-1)%p];
+  const pool=cyc.filter(v=>v!==answer);
+  const q=`某資料每 ${p} 期循環一次,依序為:${cyc.join(', ')}(然後又從頭開始)。請問第 ${N} 期是多少?`;
+  const rem=N%p;
+  const explain=`週期是 ${p}。位置 ÷ 週期:${N} ÷ ${p} 餘 ${rem}${rem===0?'(餘 0 代表循環的最後一格)':''},對應循環中的第 ${rem===0?p:rem} 個數字 = ${answer}。`;
+  return {sub:'規律預測', q, answer, options:uniqOptions(answer,()=>ri(1,9),undefined,pool), explain, meta:{t,cyc,N}};
+}
+function ftPH(){
+  const k=pick([1,2,3,1.5]), lo=ri(2,6), hi=lo+(Number.isInteger(k)?k:2), low2=Number.isInteger(k)?lo:lo+0.5;
+  // 取兩個 pH:差 k 級
+  const pL=Number.isInteger(k)? lo : lo, pH=Number.isInteger(k)? lo+k : lo+1.5;
+  const ratio=Math.pow(10,k), label=Number.isInteger(k)? `${ratio.toLocaleString()} 倍` : `約 ${Math.round(ratio)} 倍`;
+  const wrong1=Number.isInteger(k)? `${(10*k).toLocaleString()} 倍` : `約 15 倍`;
+  const wrong2=Number.isInteger(k)? `${k} 倍` : `約 1.5 倍`;
+  const OPT=[`pH ${pL} 的氫離子濃度較高,高${label}`,`pH ${pH} 的氫離子濃度較高,高${label}`,`pH ${pL} 的氫離子濃度較高,高${wrong1}`,`pH ${pL} 的氫離子濃度較高,高${wrong2}`];
+  const q=`pH 是對數尺度,每差 1 級,氫離子濃度相差 10 倍。比較 pH ${pL} 與 pH ${pH} 的溶液,下列哪一個敘述正確?`;
+  const explain=`pH 差 ${pH}−${pL} = ${k} 級,濃度倍數 = 10^${k} = ${Number.isInteger(k)?ratio.toLocaleString():'約 '+r1(ratio)}。pH 越低,氫離子濃度越高,所以 pH ${pL} 的濃度較高、高${label}。(級數差放次方,不是相乘。)`;
+  return {sub:'pH對數', q, answer:OPT[0], options:fixedOptions(OPT), explain, meta:{k,pL,pH}};
+}
+const FUNC_NEW=[ftScenario,ftSlope,ftRate,ftTaxi,ftTier,ftFree,ftPattern,ftPredict,ftPH];
+
 /* ===== 各章節題目產生器 ===== */
 const gens = {
   // CH01 數列推理
@@ -725,13 +1677,14 @@ const gens = {
   },
 
   // CH06 空間圖形
-  spatial(){ return [spNet,spTurn,spCut,spTrig,spProj][ri(0,4)](); },
+  spatial(){ return pick(SPATIAL_ALL)(); },
 
   // CH07 語文邏輯
   verbal(){ return [vbAnalogy,vbWeaken,vbDouble,vbSort,vbKin,vbGen,vbLetter,vbOdd][ri(0,7)](); },
 
   // CH04 排列組合
   perm(){
+    if(Math.random()<PERM_NEW.length/(PERM_NEW.length+6)) return pick(PERM_NEW)();
     const type = ri(0,5);
     if(type===0){
       const n=ri(5,8), r=ri(2,4);
@@ -780,6 +1733,7 @@ const gens = {
 
   // CH05 集合 Venn
   venn(){
+    if(Math.random()<VENN_NEW.length/(VENN_NEW.length+6)) return pick(VENN_NEW)();
     const type = ri(0,5);
     if(type<=1){
       const a=ri(20,50), b=ri(20,50);
@@ -838,6 +1792,7 @@ const gens = {
 
   // CH08 統計數據
   stats(){
+    if(Math.random()<ST_ALL.length/(ST_ALL.length+5)) return pick(ST_ALL)();
     const t2=ri(0,4);
     if(t2===3){
       let d, mode, mx, tries=0;
@@ -946,6 +1901,7 @@ const gens = {
 
   // CH10 函數建模
   func(){
+    if(Math.random()<FUNC_NEW.length/(FUNC_NEW.length+5)) return pick(FUNC_NEW)();
     const type=ri(0,4);
     if(type===0){
       const a=ri(2,6), b=ri(-10,10), x0=ri(2,9);
@@ -1002,6 +1958,7 @@ const gens = {
 
   // CH02 應用計算
   work(){
+    if(Math.random()<WK_ALL.length/(WK_ALL.length+10)) return pick(WK_ALL)();
     const type=ri(0,9);
     if(type===0){
       const a=ri(4,12), b=ri(4,12);
@@ -1125,14 +2082,14 @@ const gens = {
 const CHAPTERS = [
   {id:'seq',      name:'數列推理', subs:['等差數列','等比數列','拆奇偶','前項合成','冪次還原','循環餘數定位','二階差']},
   {id:'logic',    name:'真假推理', subs:['說謊者推論','矛盾判定','逆否命題','真假話計數']},
-  {id:'perm',     name:'排列組合', subs:['排列','組合','環形排列','不相鄰排列','古典機率','不放回抽樣']},
-  {id:'venn',     name:'集合 Venn', subs:['兩圈聯集','兩圈圈外','三圈容斥','互斥判定','恰好一項','極值判定']},
-  {id:'spatial',  name:'空間圖形', subs:['展開圖找對面','旋轉方向','截面形狀','三角比','簡化投影']},
+  {id:'perm',     name:'排列組合', subs:['排列','組合','環形排列','不相鄰排列','古典機率','不放回抽樣','插空排列','相鄰綁塊','環排相鄰','環排不相鄰']},
+  {id:'venn',     name:'集合 Venn', subs:['兩圈聯集','兩圈圈外','三圈容斥','互斥判定','恰好一項','極值判定','三圈恰好一類','三圈至少兩類','三圈填圖','機率加法','互斥與獨立']},
+  {id:'spatial',  name:'空間圖形', subs:['展開圖找對面','旋轉方向','截面形狀','三角比','簡化投影','任意展開圖對面','展開圖相鄰或相對','展開圖共頂點','旋轉與鏡射','對稱判定','轉角化簡','圓柱截面','圓錐截面','截面邊數']},
   {id:'verbal',   name:'語文邏輯', subs:['屬性類比','削弱論證','雙重否定','分類排序','親屬編碼','親屬世代','字母序位','分類異質項']},
-  {id:'stats',    name:'統計數據', subs:['平均數','中位數','變異數','眾數','加權平均']},
+  {id:'stats',    name:'統計數據', subs:['平均數','中位數','變異數','眾數','加權平均','內插外推','迴歸預測','殘差','結論強度','標準誤與樣本數','信賴區間','假設檢定','誤差與偏誤','條件機率','抽樣法辨識','系統抽樣','分層抽樣','抽樣目的','偏誤類型','誰被漏掉','偏誤修正','樣本大小與偏誤','r大小比較','r的意義','替代解釋','相關結論語氣','圖表選擇','百分位意義','IQR','離群判斷','圖表陷阱','極端值影響','平均數反推','典型值判斷','標準差','z分數','常態分布','比較分散程度']},
   {id:'interest', name:'商業數學', subs:['複利','損益兩平','毛利率','現值折現','目標利潤','交易損失']},
-  {id:'func',     name:'函數建模', subs:['線性函數','二次函數頂點','分段計費','二次極值','對數尺度']},
-  {id:'work',     name:'應用計算', subs:['工程效率','濃度混合','追趕相遇','平均速度','流水行船','植樹間隔','單位換算','比例分配','百分比變化','年齡問題']},
+  {id:'func',     name:'函數建模', subs:['線性函數','二次函數頂點','分段計費','二次極值','對數尺度','線性情境','反推斜率','單位變化率','計程車計費','多段電費','門檻運費','規律辨別','規律預測','pH對數']},
+  {id:'work',     name:'應用計算', subs:['工程效率','濃度混合','追趕相遇','平均速度','流水行船','植樹間隔','單位換算','比例分配','百分比變化','年齡問題','訊號延遲','影片倍速','電梯樓層','跨日時區','同距離不同速','工程餘裕','先漲後降']},
 ];
 const CH_BY_ID=Object.fromEntries(CHAPTERS.map(c=>[c.id,c]));
 
